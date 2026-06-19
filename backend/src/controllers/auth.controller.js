@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../../lib/utils.js";
 import User from "../models/User.js";
@@ -6,11 +5,6 @@ import bcrypt from "bcryptjs";
 import { ENV } from "../../lib/env.js";
 
 
-=======
-import { generateToken } from "../../lib/utils.js";
-import User from "../models/User.js";
-import bcrypt from "bcryptjs"
->>>>>>> 457c702afcc6c769ce6866198198b0fd87e2692b
 export const signup = async(req,res) => {
     const {fullName, email, password} = req.body
     const name = typeof fullName === "string" ? fullName.trim() : ""
@@ -51,33 +45,13 @@ export const signup = async(req,res) => {
         if (newUser){
             const savedUser = await newUser.save();
             generateToken(newUser._id, res)
-<<<<<<< HEAD
-            res.status(201).json({
-=======
            
-
             return res.status(201).json({
->>>>>>> 457c702afcc6c769ce6866198198b0fd87e2692b
                 _id:newUser._id,
                 fullName:newUser.fullName,
                 email:newUser.email,
                 profilePic:newUser.profilePic,
             });
-<<<<<<< HEAD
-           
-            // Send email
-            try{
-                await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
-
-            } catch (error){
-                console.error("Failed to send welcome email:", error);
-
-            }
-
-            
-
-=======
->>>>>>> 457c702afcc6c769ce6866198198b0fd87e2692b
 
         } else{
             res.status(400).json({message:"Invalid user data"});
