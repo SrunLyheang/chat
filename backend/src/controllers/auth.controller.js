@@ -1,6 +1,10 @@
+import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../../lib/utils.js";
 import User from "../models/User.js";
-import bcrypt from "bcryptjs"
+import bcrypt from "bcryptjs";
+import { ENV } from "../../lib/env.js";
+
+
 export const signup = async(req,res) => {
     const {fullName, email, password} = req.body
     const name = typeof fullName === "string" ? fullName.trim() : ""
@@ -42,7 +46,6 @@ export const signup = async(req,res) => {
             const savedUser = await newUser.save();
             generateToken(newUser._id, res)
            
-
             return res.status(201).json({
                 _id:newUser._id,
                 fullName:newUser.fullName,
