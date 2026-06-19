@@ -36,7 +36,7 @@ export const signup = async (req, res) => {
 
         // password hashing
         const salt = await bcrypt.genSalt(10)
-        const hashedPassword = await bcrypt.hash(password, salt)
+        const hashedPassword = await bcrypt.hash(pass, salt)
 
         const newUser = new User({
             fullName: name,
@@ -48,16 +48,17 @@ export const signup = async (req, res) => {
             generateToken(newUser._id, res)
 
             res.status(201).json({
-                _id: newUser._id,
-                fullName: newUser.fullName,
-                email: newUser.email,
-                profilePic: newUser.profilePic,
+                _id: savedUser._id,
+                fullName: savedUser.fullName,
+                email: savedUser.email,
+                profilePic: savedUser.profilePic,
             });
-            try {
-                await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
-            } catch (error) {
-                console.error("Failed to send welcome email:", error);
-            }
+
+            // Fire-and-forget: don't block response on email
+            sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL)
+                .catch((err) => console.error("Failed to send welcome email:", err));
+
+            return;
 
         } else {
             res.status(400).json({ message: "Invalid user data" });

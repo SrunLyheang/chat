@@ -20,15 +20,30 @@ app.use("/api/messages", messageRoutes);
 if (ENV.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-    app.get("*", (req,res) => {
-        res.sendFile(path.join(__dirname, "../frontend", "dist" ,"index.html"))
-    } )
+    app.get("*", (req, res) => {
+        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"))
+    })
 }
 
 // Recursive function to find available port and start server
-function startServer(port) {
+function startServer(port, maxRetries = 10, retryCount = 0) {
     const numPort = parseInt(port);
-    
+    const MAX_PORT = 65535;
+
+    // Check if port exceeds maximum allowed port
+    if (numPort > MAX_PORT) {
+        const error = new Error(`Cannot bind to port ${numPort}: exceeds maximum port 65535`);
+        console.error(error.message);
+        process.exit(1);
+    }
+
+    // Check if max retries exceeded
+    if (retryCount >= maxRetries) {
+        const error = new Error(`Failed to find available port after ${maxRetries} attempts (tried ports ${numPort - maxRetries} to ${numPort})`);
+        console.error(error.message);
+        process.exit(1);
+    }
+
     const server = app.listen(numPort, () => {
         console.log("Server running on port:" + numPort)
         connectDB()
@@ -38,7 +53,7 @@ function startServer(port) {
         if (err.code === 'EADDRINUSE') {
             console.log(`Port ${numPort} is already in use, trying port ${numPort + 1}...`);
             server.close();
-            startServer(numPort + 1);
+            startServer(numPort + 1, maxRetries, retryCount + 1);
         } else {
             throw err;
         }
