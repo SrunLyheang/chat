@@ -9,7 +9,7 @@ import { connectDB } from "../lib/db.js";
 const app = express();
 const __dirname = path.resolve()
 
-const PORT = ENV.PORT || 3000;
+const BASE_PORT = parseInt(ENV.PORT) || 3000;
 
 app.use(express.json()) // req.body
 
@@ -24,8 +24,25 @@ if (ENV.NODE_ENV === "production") {
         res.sendFile(path.join(__dirname, "../frontend", "dist" ,"index.html"))
     } )
 }
-app.listen(PORT, () => {
-    console.log("Server running on port:" + PORT)
-    connectDB()
 
-});
+// Recursive function to find available port and start server
+function startServer(port) {
+    const numPort = parseInt(port);
+    
+    const server = app.listen(numPort, () => {
+        console.log("Server running on port:" + numPort)
+        connectDB()
+    });
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`Port ${numPort} is already in use, trying port ${numPort + 1}...`);
+            server.close();
+            startServer(numPort + 1);
+        } else {
+            throw err;
+        }
+    });
+}
+
+startServer(BASE_PORT);
