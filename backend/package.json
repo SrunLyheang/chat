@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 457c702afcc6c769ce6866198198b0fd87e2692b
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
@@ -17,8 +21,12 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+<<<<<<< HEAD
     "mongoose": "^8.10.1",
     "resend": "^6.0.2"
+=======
+    "mongoose": "^8.10.1"
+>>>>>>> 457c702afcc6c769ce6866198198b0fd87e2692b
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
