@@ -1,0 +1,26 @@
+{
+  "name": "chat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines":  {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "nodemon --delay 1.5 src/server.js",
+    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SrunLyheang/chat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SrunLyheang/chat/issues"
+  },
+  "homepage": "https://github.com/SrunLyheang/chat#readme"
+}
