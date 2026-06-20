@@ -73,7 +73,7 @@ export const login = async (req, res) => {
     const { email, password } = req.body
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     try {
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ email: normalizedEmail })
         if (!user) return res.status(400).json({ message: "No user found!" });
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password)
