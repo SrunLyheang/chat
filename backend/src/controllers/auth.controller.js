@@ -70,11 +70,15 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    const { email, password } = req.body
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+    }
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     try {
         const user = await User.findOne({ email })
-        if (!user) return res.status(400).json({ message: "No user found!" });
+        if (!user) return res.status(400).json({ message: "Check again" });
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password)
         if (!isPasswordCorrect) return res.status(400).json({ message: "Check again" });
