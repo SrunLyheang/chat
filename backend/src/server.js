@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import path from "path";
 import { ENV } from "../lib/env.js";
 
@@ -10,8 +11,9 @@ const app = express();
 const __dirname = path.resolve()
 
 const BASE_PORT = parseInt(ENV.PORT) || 3000;
-
+// todo at size limit
 app.use(express.json()) // req.body
+app.use(cookieParser())
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
