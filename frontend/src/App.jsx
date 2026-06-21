@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import ChatPage from './pages/ChatPage'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/useAuthStore'
 import PageLoader from './components/PageLoader'
@@ -9,13 +10,11 @@ import PageLoader from './components/PageLoader'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
-  const { checkAuth, isCheckingAuth, authUser } = useAuthStore()
+  const { checkAuth, isCheckingAuth, authUser, pendingUser } = useAuthStore()
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
-
-  console.log({ authUser })
 
   if (isCheckingAuth) return <PageLoader />;
 
@@ -30,6 +29,7 @@ function App() {
         <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" />} />
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
+        <Route path="/verify-email" element={pendingUser ? <VerifyEmailPage /> : <Navigate to="/signup" />} />
       </Routes>
       <Toaster />
     </div>
