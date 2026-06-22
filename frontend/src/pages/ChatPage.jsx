@@ -1,26 +1,33 @@
-import { useAuthStore } from '../store/useAuthStore'
-import { useNavigate } from 'react-router-dom'
+import ActiveTabSwitch from "../components/ActiveTabSwitch";
+import ChatContainer from "../components/ChatContainer";
+import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
+import { useChatStore } from "../store/useChatStore";
+import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
+import ContactList from "./ContactList";
+import ProfileHeader from "../components/ProfileHeader";
+import ChatList from "../components/ChatList";
 
 function ChatPage() {
-  const { logout } = useAuthStore();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
+  const { activeTab, selectedUser } = useChatStore();
   return (
-    <div className="text-slate-200 z-10">
-      chat page
-      <button
-        onClick={handleLogout}
-        className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-      >
-        Logout
-      </button>
+    <div className="relative w-full max-w-6xl h-[800px]">
+      <BorderAnimatedContainer>
+        {/* left */}
+        <div className="w-80 bg-slate-800/50 backdrop-blur-sm flex flex-col">
+          <ProfileHeader />
+          <ActiveTabSwitch />
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {activeTab === "chats" ? <ChatList /> : <ContactList />}
+          </div>
+        </div>
+
+        {/* right side */}
+        <div className="flex-1 flex flex-col bg-slate-900/50 backdrop-blur-sm">
+          {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}
+        </div>
+      </BorderAnimatedContainer>
     </div>
   );
 }
-
 export default ChatPage;
