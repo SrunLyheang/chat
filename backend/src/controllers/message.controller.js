@@ -1,4 +1,4 @@
-import cloudinary from "../../lib/cloudinary.js";
+import { uploadImage } from "../../lib/cloudinary.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 
@@ -53,7 +53,9 @@ export const sendMessage = async (req, res) => {
     let imageUrl;
     if (image) {
       // upload base64 image to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
+      const uploadResponse = await uploadImage(image, {
+        folder: "chat-app/messages",
+      });
       imageUrl = uploadResponse.secure_url;
     }
     const newMessage = new Message({

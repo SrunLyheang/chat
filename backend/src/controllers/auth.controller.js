@@ -4,7 +4,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../../lib/env.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
-import cloudinary from "../../lib/cloudinary.js";
+import { uploadImage } from "../../lib/cloudinary.js";
 
 // Generate random 6-digit verification code
 const generateVerificationCode = () => {
@@ -176,19 +176,38 @@ export const logout = (_, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const { profilePic } = req.body;
+
         if (!profilePic) return res.status(400).json({ message: "Profile pic is required" })
+        if (typeof profilePic !== "string" || !profilePic.startsWith("data:image/")) {
+            return res.status(400).json({ message: "Profile pic must be a base64 image" });
+        }
+
         const userId = req.user._id;
 
-        const uploadresponse = await cloudinary.uploader(profilePic)
+        const uploadResponse = await uploadImage(profilePic, {
+            folder: "chat-app/profile-pictures",
+            public_id: userId.toString(),
+            overwrite: true,
+        });
 
         const updatedUser = await User.findByIdAndUpdate(userId,
-            { profilePic: uploadresponse.secure_url },
+            { profilePic: uploadResponse.secure_url },
             { new: true }
         );
         res.status(200).json(updatedUser)
 
     } catch (error) {
-        console.log("Error in update profile:", error);
+        console.log("Error in update profile:", {
+            message: error.message,
+            http_code: error.http_code,
+            name: error.name,
+        });
+        if (error.http_code) {
+            return res.status(error.http_code).json({
+                message: error.message || "Cloudinary upload failed",
+            });
+        }
+
         res.status(500).json({ message: "Internal server error" });
     }
 
