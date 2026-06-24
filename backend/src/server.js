@@ -8,11 +8,12 @@ import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "../lib/db.js";
 import cors from "cors"
 const app = express();
+app.set('trust proxy', true);
 const __dirname = path.resolve()
 
 const BASE_PORT = parseInt(ENV.PORT) || 3000;
-// todo at size limit
-app.use(express.json()) // req.body
+
+app.use(express.json({ limit: "15mb" })) // req.body
 app.use(cors({ origin: ENV.CLIENT_URL || "http://localhost:5173", credentials: true }))
 app.use(cookieParser())
 
