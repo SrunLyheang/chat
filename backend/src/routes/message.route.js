@@ -1,6 +1,6 @@
 
 import express from "express";
-import arcjetProtection from "@arcjet/node";
+import { arcjetProtection } from "../middleware/arcjet.middleware.js"
 import { getAllContacts, getChatPartners, getMessagesByUserId, sendMessage } from "../controllers/message.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 const router = express.Router();
