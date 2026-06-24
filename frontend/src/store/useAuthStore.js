@@ -8,6 +8,7 @@ export const useAuthStore = create((set) => ({
   isSigningUp: false,
   isLoggingIn: false,
   isVerifying: false,
+  isUpdatingProfile: false,
   pendingUser: null,
 
 
@@ -15,6 +16,7 @@ export const useAuthStore = create((set) => ({
     try {
       const res = await axiosInstance.get("/auth/check")
       set({ authUser: res.data })
+
     } catch (error) {
       console.log("Error in authCheck: ", error)
       set({ authUser: null })
@@ -32,7 +34,7 @@ export const useAuthStore = create((set) => ({
       toast.success("Signup successful! Check your email for verification code.")
 
     } catch (error) {
-      toast.error(error.response.data.message || "Sign up failed. Please try again.")
+      toast.error(error.response?.data?.message || "Sign up failed. Please try again.")
     } finally {
       set({ isSigningUp: false })
     }
@@ -46,7 +48,7 @@ export const useAuthStore = create((set) => ({
       toast.success("Login successful!")
 
     } catch (error) {
-      toast.error(error.response.data.message || "Login failed. Please try again.")
+      toast.error(error.response?.data?.message || "Login failed. Please try again.")
     } finally {
       set({ isLoggingIn: false })
     }
@@ -63,7 +65,7 @@ export const useAuthStore = create((set) => ({
       toast.success("Email verified successfully!")
 
     } catch (error) {
-      toast.error(error.response.data.message || "Verification failed. Please try again.")
+      toast.error(error.response?.data?.message || "Verification failed. Please try again.")
     } finally {
       set({ isVerifying: false })
     }
@@ -75,9 +77,24 @@ export const useAuthStore = create((set) => ({
       set({ authUser: null })
       toast.success("Logged out successfully")
     } catch (error) {
-      toast.error(error.response.data.message || "Logout failed")
+      toast.error(error.response?.data?.message || "Logout failed")
     }
-  }
-}))
+  },
+  updateProfile: async (data) => {
+    set({ isUpdatingProfile: true })
+    try {
+      const res = await axiosInstance.put("/auth/update-profile", data)
+      set({ authUser: res.data })
+      toast.success("Profile updated successfully!")
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Profile update failed. Please try again.")
+    } finally {
+      set({ isUpdatingProfile: false })
+    }
+  },
+}));
+
+
+
 
 export default useAuthStore
