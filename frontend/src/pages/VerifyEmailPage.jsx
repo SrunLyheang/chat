@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
@@ -7,15 +7,46 @@ import { Link } from "react-router-dom";
 
 function VerifyEmailPage() {
   const [verificationCode, setVerificationCode] = useState("");
-  const { verifyEmail, isVerifying, pendingUser } = useAuthStore();
+  const {
+    verifyEmail,
+    resendVerification,
+    cancelVerification,
+    isVerifying,
+    isResendingVerification,
+    isCancellingVerification,
+    pendingUser,
+    authUser,
+  } = useAuthStore();
   const navigate = useNavigate();
+
+  // Belt-and-suspenders: if verification just succeeded, leave this page
+  // even if the router guards aren't wired up yet.
+  useEffect(() => {
+    if (authUser) navigate("/", { replace: true });
+  }, [authUser, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (verificationCode.length !== 6) {
       return;
     }
-    await verifyEmail(pendingUser.email, verificationCode);
+    const success = await verifyEmail(pendingUser.email, verificationCode);
+    if (success) navigate("/", { replace: true });
+  };
+
+  const handleResend = async () => {
+    if (!pendingUser?.email) return;
+    await resendVerification(pendingUser.email);
+  };
+
+  // FIX #4: escape hatch — typo'd email or just want to bail out and restart
+  const handleCancel = async () => {
+    const confirmed = window.confirm(
+      "This deletes your pending signup so you can start over with a different email. Continue?"
+    );
+    if (!confirmed) return;
+    await cancelVerification();
+    navigate("/signup", { replace: true });
   };
 
   if (!pendingUser) {
@@ -86,21 +117,31 @@ function VerifyEmailPage() {
               </button>
             </form>
 
-            {/* RESEND LINK */}
+            {/* RESEND — Issue #2 */}
             <div className="text-center mt-6">
               <p className="text-sm text-slate-400">
                 Didn't receive the code?{" "}
-                <button className="text-blue-400 hover:text-blue-300 font-medium">
-                  Resend
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={isResendingVerification}
+                  className="text-blue-400 hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isResendingVerification ? "Sending..." : "Resend"}
                 </button>
               </p>
             </div>
 
-            {/* BACK TO SIGNUP */}
-            <div className="text-center mt-4">
-              <Link to="/signup" className="text-slate-400 hover:text-slate-300 text-sm">
-                Back to signup
-              </Link>
+            {/* ESCAPE HATCH — Issue #4: wrong email, start over cleanly */}
+            <div className="text-center mt-4 pt-4 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isCancellingVerification}
+                className="text-slate-500 hover:text-red-400 text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {isCancellingVerification ? "Cancelling..." : "Wrong email? Cancel & start over"}
+              </button>
             </div>
           </div>
         </BorderAnimatedContainer>

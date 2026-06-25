@@ -3,14 +3,15 @@ import ChatPage from './pages/ChatPage'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { useAuthStore } from './store/useAuthStore'
 import PageLoader from './components/PageLoader'
+import { RequireAuth, RequireGuest, RequirePendingOrGuest } from './components/RouteGuards'
 
 import { Toaster } from 'react-hot-toast'
 
 function App() {
-  const { checkAuth, isCheckingAuth, authUser, pendingUser } = useAuthStore()
+  const { checkAuth, isCheckingAuth } = useAuthStore()
 
   useEffect(() => {
     checkAuth()
@@ -26,10 +27,13 @@ function App() {
       <div className="absolute bottom-0 -right-4 size-96 bg-cyan-500 opacity-20 blur-[100px]" />
 
       <Routes>
-        <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" />} />
-        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
-        <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/verify-email" element={pendingUser ? <VerifyEmailPage /> : <Navigate to="/signup" />} />
+        <Route path="/" element={<RequireAuth><ChatPage /></RequireAuth>} />
+        <Route path="/login" element={<RequireGuest><LoginPage /></RequireGuest>} />
+        <Route path="/signup" element={<RequireGuest><SignUpPage /></RequireGuest>} />
+        <Route
+          path="/verify-email"
+          element={<RequirePendingOrGuest><VerifyEmailPage /></RequirePendingOrGuest>}
+        />
       </Routes>
       <Toaster />
     </div>
