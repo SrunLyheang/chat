@@ -13,7 +13,7 @@ const __dirname = path.resolve()
 
 const BASE_PORT = parseInt(ENV.PORT) || 3000;
 
-app.use(express.json({ limit: "15mb" })) // req.body
+app.use(express.json({ limit: "10mb" })) // req.body
 app.use(cors({ origin: ENV.CLIENT_URL || "http://localhost:5173", credentials: true }))
 app.use(cookieParser())
 
