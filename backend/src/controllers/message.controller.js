@@ -1,6 +1,8 @@
 import { uploadImage } from "../../lib/cloudinary.js";
+import { getReceiverSocketId, io } from "../../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+
 
 
 export const getAllContacts = async (req, res) => {
@@ -67,9 +69,12 @@ export const sendMessage = async (req, res) => {
       image: imageUrl,
     });
     await newMessage.save();
-    // todo send message in realtime if user is online -socket.io
-    res.status(201).json(newMessage);
 
+    const receiverSocketId = getReceiverSocketId(receiverId)
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage)
+    }
+    res.status(201).json(newMessage);
 
   } catch (error) {
     console.log("Error in sendMessage controller : ", error.message);
@@ -81,26 +86,29 @@ export const sendMessage = async (req, res) => {
 
 export const getChatPartners = async (req, res) => {
   try {
-    const loggedInUserId = req.user._id
+    const loggedInUserId = req.user._id;
+    const loggedInUserIdStr = loggedInUserId.toString(); // <-- the fix
 
-    // find all the messages where logged in user is either the sender or the reciever
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
     });
+
     const chatPartnerIds = [
       ...new Set(
         messages.map((msg) =>
-          msg.senderId.toString() === loggedInUserId
+          msg.senderId.toString() === loggedInUserIdStr
             ? msg.receiverId.toString()
             : msg.senderId.toString()
         )
       ),
-    ];
+    ].filter((id) => id !== loggedInUserIdStr); // belt-and-suspenders
 
-    const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password")
-    res.status(200).json(chatPartners)
+    const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");
+    res.status(200).json(chatPartners);
   } catch (error) {
-    console.log("Error in sendMessage controller : ", error.message);
+    console.log("Error in getChatPartners controller : ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
-}
+};
+
+
