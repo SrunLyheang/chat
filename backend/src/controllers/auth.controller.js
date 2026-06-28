@@ -6,16 +6,10 @@ import { ENV } from "../../lib/env.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { uploadImage } from "../../lib/cloudinary.js";
 
-// --- Verification email rate-limit config (Issue #3) ---
-const MAX_VERIFICATION_ATTEMPTS = 5; // total verification emails allowed per account
-const RESEND_COOLDOWN_MS = 30 * 1000; // min gap between sends; set to 0 to disable
 
-// --- Verification window (drives BOTH the code's validity AND auto-delete) ---
-// This is the one field (verificationTokenExpiry) that the TTL index in
-// User.js watches, so shortening this also shortens how long an abandoned,
-// unverified signup sticks around before Mongo (or the next signup attempt)
-// removes it. 15 min is tight — if you see "expired code" complaints from
-// slow email delivery, this is the first thing to bump up.
+const MAX_VERIFICATION_ATTEMPTS = 5; // total verification emails allowed per account
+const RESEND_COOLDOWN_MS = 30 * 1000; // min gap between sends
+
 const VERIFICATION_WINDOW_MS = 15 * 60 * 1000;
 
 // Generate random 6-digit verification code
@@ -23,7 +17,7 @@ const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Small helper shared by signup-retry and resend-verification
+
 const checkCooldown = (lastSentAt) => {
     if (!lastSentAt || RESEND_COOLDOWN_MS === 0) return { onCooldown: false, waitSeconds: 0 };
     const elapsed = Date.now() - lastSentAt.getTime();
@@ -144,13 +138,12 @@ export const signup = async (req, res) => {
             message: "Signup successful! Please verify your email."
         });
 
-        // Fire-and-forget: don't block response on email
+
         sendVerificationEmail(savedUser.email, savedUser.fullName, verificationCode)
             .catch((err) => console.error("Failed to send verification email:", err));
 
     } catch (error) {
-        // Defensive: a race between two simultaneous signups for the same brand-new
-        // email could both pass the findOne check before either insert completes.
+
         if (error?.code === 11000) {
             return res.status(409).json({ message: "Email already in use" });
         }
@@ -159,7 +152,7 @@ export const signup = async (req, res) => {
     }
 };
 
-// --- FIX #2 & #3: Resend verification, with the same rate limit/cooldown ---
+
 export const resendVerification = async (req, res) => {
     const { email } = req.body;
 
