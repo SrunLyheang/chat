@@ -1,8 +1,13 @@
 import { create } from 'zustand'
 import { axiosInstance } from "../lib/axios"
 import { toast } from 'react-hot-toast'
+import { io } from "socket.io-client"
+
+
 
 const PENDING_EMAIL_KEY = "pendingVerificationEmail";
+const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : "/";
+
 
 // Page refreshes wipe in-memory zustand state, but a user mid-verification
 // shouldn't lose their place — so we keep just the email in localStorage,
@@ -14,7 +19,7 @@ const getStoredPendingEmail = () => {
     return null;
   }
 };
-
+const storedEmail = getStoredPendingEmail();
 const setStoredPendingEmail = (email) => {
   try {
     if (email) localStorage.setItem(PENDING_EMAIL_KEY, email);
@@ -29,11 +34,13 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   isSigningUp: false,
   isLoggingIn: false,
+  socket: null,
+  onlineUsers: [],
   isVerifying: false,
   isResendingVerification: false,
   isCancellingVerification: false,
   isUpdatingProfile: false,
-  pendingUser: getStoredPendingEmail() ? { email: getStoredPendingEmail() } : null,
+  pendingUser: storedEmail ? { email: storedEmail } : null,
 
 
   checkAuth: async () => {
@@ -41,6 +48,8 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.get("/auth/check")
       set({ authUser: res.data, pendingUser: null })
       setStoredPendingEmail(null)
+      get().connectSocket()
+
 
     } catch (error) {
       console.log("Error in authCheck: ", error)
@@ -58,6 +67,8 @@ export const useAuthStore = create((set, get) => ({
       set({ pendingUser: res.data })
       setStoredPendingEmail(res.data.email)
       toast.success("Signup successful! Check your email for verification code.")
+      get().connectSocket()
+
       return true
 
     } catch (error) {
@@ -75,6 +86,7 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: res.data, pendingUser: null })
       setStoredPendingEmail(null)
       toast.success("Login successful!")
+      get().connectSocket()
 
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed. Please try again.")
@@ -143,6 +155,7 @@ export const useAuthStore = create((set, get) => ({
       await axiosInstance.post("/auth/logout")
       set({ authUser: null })
       toast.success("Logged out successfully")
+      get().disconnectSocket()
     } catch (error) {
       toast.error(error.response?.data?.message || "Logout failed")
     }
@@ -159,6 +172,26 @@ export const useAuthStore = create((set, get) => ({
       set({ isUpdatingProfile: false })
     }
   },
+  connectSocket: () => {
+    const { authUser } = get()
+    if (!authUser || get().socket?.connected) return
+
+    const socket = io(BASE_URL, {
+      withCredentials: true
+    })
+    // ensures cookies are sent with the connection
+    socket.connect()
+
+    set({ socket })
+
+    // listen for online users event
+    socket.on("getOnlineUsers", (userIds) => {
+      set({ onlineUsers: userIds })
+    })
+  },
+  disconnectSocket: () => {
+    if (get().socket?.connected) get().socket.disconnect()
+  }
 }));
 
 export default useAuthStore
