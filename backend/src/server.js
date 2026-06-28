@@ -7,7 +7,10 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "../lib/db.js";
 import cors from "cors"
-const app = express();
+import { app, server } from "../lib/socket.js";
+import { fileURLToPath } from "url";
+
+
 app.set('trust proxy', true);
 const __dirname = path.resolve()
 
@@ -34,32 +37,31 @@ function startServer(port, maxRetries = 10, retryCount = 0) {
     const numPort = parseInt(port);
     const MAX_PORT = 65535;
 
-    // Check if port exceeds maximum allowed port
     if (numPort > MAX_PORT) {
         const error = new Error(`Cannot bind to port ${numPort}: exceeds maximum port 65535`);
         console.error(error.message);
         process.exit(1);
     }
 
-    // Check if max retries exceeded
     if (retryCount >= maxRetries) {
         const error = new Error(`Failed to find available port after ${maxRetries} attempts (tried ports ${numPort - maxRetries} to ${numPort})`);
         console.error(error.message);
         process.exit(1);
     }
 
-    const server = app.listen(numPort, () => {
+    const httpServer = server.listen(numPort, () => {
         console.log("Server running on port:" + numPort)
         connectDB()
     });
 
-    server.on('error', (err) => {
+    httpServer.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
             console.log(`Port ${numPort} is already in use, trying port ${numPort + 1}...`);
-            server.close();
+            httpServer.close();
             startServer(numPort + 1, maxRetries, retryCount + 1);
         } else {
-            throw err;
+            console.error("Server error:", err);
+            process.exit(1);
         }
     });
 }
