@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react'; // Added missing hooks
-import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react'; // Example import for XIcon, adjust to your library
+import React, { useState, useRef } from 'react';
+import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react';
 import useKeyboardSound from '../../../backend/src/hooks/useKeyboardSound';
 import { useChatStore } from "../store/useChatStore";
 
@@ -16,16 +16,15 @@ function MessageInput() {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
 
-    // Fixed: Added parentheses to invoke the function
     if (isSoundEnabled) playRandomKeyStrokeSound();
 
     sendMessage({
-      text: text.trim(), // Fixed: Changed 'test' to 'text'
+      text: text.trim(),
       image: imagePreview
     });
 
     setText("");
-    setImagePreview(null); // Fixed: Reset to null instead of "" to match initial state
+    setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
