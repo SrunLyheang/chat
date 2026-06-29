@@ -28,7 +28,7 @@ export const getMessagesByUserId = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
-    });
+    }).sort({ createdAt: 1 }); // oldest -> newest, matches existing indexes
     res.status(200).json(messages)
 
   } catch (error) {
@@ -110,5 +110,3 @@ export const getChatPartners = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-

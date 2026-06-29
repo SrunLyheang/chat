@@ -4,6 +4,9 @@ import toast from 'react-hot-toast';
 import useAuthStore from './useAuthStore';
 
 
+const sortMessages = (msgs) =>
+  [...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
 
 
 export const useChatStore = create((set, get) => ({
@@ -53,7 +56,7 @@ export const useChatStore = create((set, get) => ({
     set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
-      set({ messages: res.data });
+      set({ messages: sortMessages(res.data) });
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
@@ -77,14 +80,16 @@ export const useChatStore = create((set, get) => ({
     };
 
     // Immediately update the UI with the optimistic message
-    set({ messages: [...messages, optimisticMessage] });
+    set({ messages: sortMessages([...messages, optimisticMessage]) });
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
 
       // Fixed: Replace the temporary optimistic message with the actual saved message from the backend
       set({
-        messages: get().messages.map((msg) => msg._id === tempId ? res.data : msg)
+        messages: sortMessages(
+          get().messages.map((msg) => msg._id === tempId ? res.data : msg)
+        )
       });
     } catch (error) {
       set({ messages: messages });
@@ -104,7 +109,7 @@ export const useChatStore = create((set, get) => ({
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
       if (!isMessageSentFromSelectedUser) return;
       const currentMessages = get().messages
-      set({ messages: [...currentMessages, newMessage] })
+      set({ messages: sortMessages([...currentMessages, newMessage]) })
       if (isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
 
