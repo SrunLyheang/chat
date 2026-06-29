@@ -12,8 +12,11 @@ function ChatPage() {
   return (
     <div className="fixed inset-0 flex">
       <BorderAnimatedContainer>
-        {/* left */}
-        <div className="w-80 bg-slate-800/50 backdrop-blur-sm flex flex-col">
+        {/* left: full width on mobile/tablet when nothing is selected, fixed width on desktop */}
+        <div
+          className={`w-full lg:w-80 bg-slate-800/50 backdrop-blur-sm flex-col ${selectedUser ? "hidden lg:flex" : "flex"
+            }`}
+        >
           <ProfileHeader />
           <ActiveTabSwitch />
 
@@ -22,8 +25,11 @@ function ChatPage() {
           </div>
         </div>
 
-        {/* right side */}
-        <div className="flex-1 flex flex-col bg-slate-900/50 backdrop-blur-sm">
+        {/* right side: full width on mobile/tablet once a chat is open */}
+        <div
+          className={`w-full lg:flex-1 flex-col bg-slate-900/50 backdrop-blur-sm ${selectedUser ? "flex" : "hidden lg:flex"
+            }`}
+        >
           {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}
         </div>
       </BorderAnimatedContainer>
