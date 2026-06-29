@@ -2,12 +2,12 @@ import React, { useState, useRef } from 'react';
 import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react';
 import useKeyboardSound from '../../../backend/src/hooks/useKeyboardSound';
 import { useChatStore } from "../store/useChatStore";
+import { toast } from 'react-hot-toast'
 
 function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
-
   const fileInputRef = useRef(null);
 
   const { sendMessage, isSoundEnabled } = useChatStore();
@@ -32,7 +32,7 @@ function MessageInput() {
 
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startWith("image/")) {
+    if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
