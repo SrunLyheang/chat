@@ -32,38 +32,12 @@ if (ENV.NODE_ENV === "production") {
     })
 }
 
-// Recursive function to find available port and start server
-function startServer(port, maxRetries = 10, retryCount = 0) {
-    const numPort = parseInt(port);
-    const MAX_PORT = 65535;
+const httpServer = server.listen(BASE_PORT, () => {
+    console.log("Server running on port:" + BASE_PORT)
+    connectDB()
+});
 
-    if (numPort > MAX_PORT) {
-        const error = new Error(`Cannot bind to port ${numPort}: exceeds maximum port 65535`);
-        console.error(error.message);
-        process.exit(1);
-    }
-
-    if (retryCount >= maxRetries) {
-        const error = new Error(`Failed to find available port after ${maxRetries} attempts (tried ports ${numPort - maxRetries} to ${numPort})`);
-        console.error(error.message);
-        process.exit(1);
-    }
-
-    const httpServer = server.listen(numPort, () => {
-        console.log("Server running on port:" + numPort)
-        connectDB()
-    });
-
-    httpServer.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            console.log(`Port ${numPort} is already in use, trying port ${numPort + 1}...`);
-            httpServer.close();
-            startServer(numPort + 1, maxRetries, retryCount + 1);
-        } else {
-            console.error("Server error:", err);
-            process.exit(1);
-        }
-    });
-}
-
-startServer(BASE_PORT);
+httpServer.on('error', (err) => {
+    console.error("Server error:", err);
+    process.exit(1);
+});
