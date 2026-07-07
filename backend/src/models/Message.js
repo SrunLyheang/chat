@@ -20,15 +20,30 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    seen: {
+      type: Boolean,
+      default: false,
+    },
+    seenAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
 // optimize frequent queries
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
 messageSchema.index({ receiverId: 1, senderId: 1, createdAt: -1 });
-// require at least one of text and image
+// require at least one of text and image (unless the message was deleted)
 messageSchema.pre("validate", function (next) {
-  if (!this.text && !this.image) {
+  if (!this.isDeleted && !this.text && !this.image) {
     return next(new Error("Either text or image is required"));
   }
   next()
