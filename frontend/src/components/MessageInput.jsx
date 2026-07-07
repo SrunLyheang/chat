@@ -1,22 +1,39 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react';
 import useKeyboardSound from '../../../backend/src/hooks/useKeyboardSound';
 import { useChatStore } from "../store/useChatStore";
 import { toast } from 'react-hot-toast'
+
+const TYPING_TIMEOUT = 1500;
 
 function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled } = useChatStore();
+  const { sendMessage, isSoundEnabled, startTyping, stopTyping } = useChatStore();
+
+  const handleTextChange = (e) => {
+    setText(e.target.value);
+    isSoundEnabled && playRandomKeyStrokeSound();
+
+    startTyping();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping();
+    }, TYPING_TIMEOUT);
+  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
 
     if (isSoundEnabled) playRandomKeyStrokeSound();
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    stopTyping();
 
     sendMessage({
       text: text.trim(),
@@ -47,6 +64,14 @@ function MessageInput() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      stopTyping();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="p-4 border-t border-slate-700/50">
       {imagePreview && (
@@ -72,10 +97,7 @@ function MessageInput() {
         <input
           type="text"
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            isSoundEnabled && playRandomKeyStrokeSound();
-          }}
+          onChange={handleTextChange}
           className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
           placeholder="Type your message..."
         />
