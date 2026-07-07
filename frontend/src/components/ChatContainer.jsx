@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
+import { MoreVertical, Pencil, Trash2, Check, CheckCheck, X } from "lucide-react";
 
 
 
@@ -15,12 +16,34 @@ function ChatContainer() {
     messages,
     isMessagesLoading,
     subscribeToMessages,
-    unsubscribeFromMessages
+    unsubscribeFromMessages,
+    editMessage,
+    deleteMessage,
 
 
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null)
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [enlargedImage, setEnlargedImage] = useState(null);
+
+  const startEditing = (msg) => {
+    setEditingId(msg._id);
+    setEditText(msg.text || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const saveEditing = (messageId) => {
+    const trimmed = editText.trim();
+    if (!trimmed) return cancelEditing();
+    editMessage(messageId, trimmed);
+    cancelEditing();
+  };
 
 
   useEffect(() => {
@@ -45,32 +68,115 @@ function ChatContainer() {
       <div className="flex-1 px-6 overflow-y-auto py-8">
         {messages.length > 0 && !isMessagesLoading ? (
           <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((msg) => (
-              <div
-                key={msg._id}
-                className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"}`}
-              >
+            {messages.map((msg) => {
+              const isOwnMessage = msg.senderId === authUser._id;
+              const isEditingThis = editingId === msg._id;
+
+              return (
                 <div
-                  className={`chat-bubble relative ${msg.senderId === authUser._id
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-800 text-slate-200"
-                    }`}
+                  key={msg._id}
+                  className={`chat ${isOwnMessage ? "chat-end" : "chat-start"} group`}
                 >
-                  {msg.image && (
-                    <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
-                  )}
-                  {msg.text && <p className="mt-2">{msg.text}</p>}
-                  <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
-                    {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
+                  <div
+                    className={`chat-bubble relative ${isOwnMessage
+                      ? "bg-cyan-600 text-white"
+                      : "bg-slate-800 text-slate-200"
+                      }`}
+                  >
+                    {isOwnMessage && !msg.isDeleted && !isEditingThis && (
+                      <div className="dropdown dropdown-left absolute -top-2 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <label tabIndex={0} className="cursor-pointer">
+                          <MoreVertical className="w-4 h-4" />
+                        </label>
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content menu menu-sm z-10 mt-1 p-1 shadow bg-slate-900 rounded-box w-32 text-slate-200"
+                        >
+                          {msg.text && (
+                            <li>
+                              <button
+                                onClick={() => {
+                                  document.activeElement?.blur();
+                                  startEditing(msg);
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Edit
+                              </button>
+                            </li>
+                          )}
+                          <li>
+                            <button
+                              onClick={() => {
+                                document.activeElement?.blur();
+                                deleteMessage(msg._id);
+                              }}
+                              className="flex items-center gap-2 text-red-400"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
 
-                    })}
-                  </p>
+                    {msg.isDeleted ? (
+                      <p className="italic opacity-60 text-sm">This message was deleted</p>
+                    ) : (
+                      <>
+                        {msg.image && (
+                          <img
+                            src={msg.image}
+                            alt="Shared"
+                            onClick={() => setEnlargedImage(msg.image)}
+                            className="rounded-lg h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          />
+                        )}
+                        {isEditingThis ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              autoFocus
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEditing(msg._id);
+                                if (e.key === "Escape") cancelEditing();
+                              }}
+                              className="input input-sm input-bordered bg-slate-950/40 text-inherit w-full"
+                            />
+                            <button onClick={() => saveEditing(msg._id)}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button onClick={cancelEditing}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          msg.text && <p className="mt-2">{msg.text}</p>
+                        )}
+                      </>
+                    )}
 
+                    <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
+                      {new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+
+                      })}
+                      {msg.isEdited && !msg.isDeleted && <span className="italic">(edited)</span>}
+                      {isOwnMessage && !msg.isDeleted && (
+                        msg.seen ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-sky-300" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )
+                      )}
+                    </p>
+
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {/* Scroll */}
             <div ref={messageEndRef} />
 
@@ -83,6 +189,26 @@ function ChatContainer() {
           <NoChatHistoryPlaceholder name={selectedUser.fullName} />
         )}
       </div>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            onClick={() => setEnlargedImage(null)}
+            className="absolute top-4 right-4 text-slate-200 hover:text-white"
+          >
+            <X className="w-7 h-7" />
+          </button>
+          <img
+            src={enlargedImage}
+            alt="Enlarged"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+          />
+        </div>
+      )}
 
       <MessageInput />
     </>

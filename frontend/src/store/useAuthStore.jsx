@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { axiosInstance } from "../lib/axios"
 import { toast } from 'react-hot-toast'
 import { io } from "socket.io-client"
+import { useChatStore } from "./useChatStore"
 
 
 
@@ -179,14 +180,60 @@ export const useAuthStore = create((set, get) => ({
     const socket = io(BASE_URL, {
       withCredentials: true
     })
-    // ensures cookies are sent with the connection
     socket.connect()
 
     set({ socket })
 
-    // listen for online users event
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds })
+    })
+
+    socket.on("newMessage", (message) => {
+      const chatStore = useChatStore.getState();
+      const isChatOpen = chatStore.selectedUser?._id === message.senderId;
+      if (isChatOpen) return;
+
+      const sender =
+        chatStore.chats.find((c) => c._id === message.senderId) ||
+        chatStore.allContacts.find((c) => c._id === message.senderId);
+
+      if (chatStore.isSoundEnabled) {
+        const notificationSound = new Audio("/sounds/notification.mp3");
+        notificationSound.currentTime = 0;
+        notificationSound.play().catch((e) => console.log("Audio play failed:", e));
+      }
+
+      toast.custom(
+        (t) => (
+          <div
+            onClick={() => {
+              chatStore.setSelectedUser(
+                sender || { _id: message.senderId, fullName: "New message", profilePic: null }
+              );
+              chatStore.setActiveTab("chats");
+              toast.dismiss(t.id);
+            }}
+            className="max-w-sm w-full bg-slate-800 border border-slate-700/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/80 transition-colors"
+          >
+            <img
+              src={sender?.profilePic || "/avatar.png"}
+              alt={sender?.fullName || "New message"}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-100 font-medium text-sm truncate">
+                {sender?.fullName || "New message"}
+              </p>
+              <p className="text-slate-400 text-xs truncate">
+                {message.image ? "📷 Photo" : message.text}
+              </p>
+            </div>
+          </div>
+        ),
+        { duration: 4000 }
+      );
+
+      chatStore.getMyChatPartners();
     })
   },
   disconnectSocket: () => {
@@ -195,3 +242,5 @@ export const useAuthStore = create((set, get) => ({
 }));
 
 export default useAuthStore
+
+
