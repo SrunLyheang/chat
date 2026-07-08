@@ -7,6 +7,7 @@ export default {
     extend: {
       animation: {
         border: "border 4s linear infinite",
+        shimmer: "shimmer 2s infinite",
       },
       keyframes: {
         border: {

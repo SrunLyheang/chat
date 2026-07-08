@@ -44,6 +44,37 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("userTyping", { userId });
     }
   });
+  socket.on("callUser", ({ receiverId, callId, callerName }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("incomingCall", {
+        callId,
+        callerId: userId,
+        callerName,
+      });
+    }
+  });
+
+  socket.on("declineCall", ({ receiverId }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callDeclined");
+    }
+  });
+
+  socket.on("answerCall", ({ receiverId, callId, receiverName }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callAnswered", { callId, receiverName });
+    }
+  });
+
+  socket.on("endCall", ({ receiverId }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callEnded");
+    }
+  });
 
   socket.on("stopTyping", ({ receiverId }) => {
     const receiverSocketId = getReceiverSocketId(receiverId);
