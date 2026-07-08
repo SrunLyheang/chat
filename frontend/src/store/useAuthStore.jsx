@@ -187,6 +187,32 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds })
     })
+    socket.on("incomingCall", (payload) => {
+      import("./useCallStore").then(({ useCallStore }) => {
+        useCallStore.getState().setIncomingCall(payload);
+      });
+    });
+
+    socket.on("callDeclined", () => {
+      import("./useCallStore").then(({ useCallStore }) => {
+        toast.error("The other person declined the call.");
+        useCallStore.getState().declineCall();
+      });
+    });
+
+    socket.on("callAnswered", ({ receiverName }) => {
+      import("./useCallStore").then(({ useCallStore }) => {
+        toast.success(`${receiverName} joined the call`);
+        useCallStore.getState().setCallStatus("connected");
+      });
+    });
+
+    socket.on("callEnded", () => {
+      import("./useCallStore").then(({ useCallStore }) => {
+        toast("The call has ended.", { icon: "📞" });
+        useCallStore.getState().handleCallLeft();
+      });
+    });
 
     socket.on("newMessage", (message) => {
       const chatStore = useChatStore.getState();

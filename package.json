@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "engines":  {
+  "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/SrunLyheang/chat/issues"
   },
-  "homepage": "https://github.com/SrunLyheang/chat#readme"
+  "homepage": "https://github.com/SrunLyheang/chat#readme",
+  "dependencies": {
+    "@stream-io/video-react-sdk": "^1.39.1"
+  }
 }
