@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import ChatPage from './pages/ChatPage'
+import { useCallStore } from './store/useCallStore'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
@@ -9,13 +10,29 @@ import PageLoader from './components/PageLoader'
 import { RequireAuth, RequireGuest, RequirePendingOrGuest } from './components/RouteGuards'
 
 import { Toaster } from 'react-hot-toast'
+import CallModal from './components/CallModal'
+import IncomingCallToast from './components/IncomingCallToast'
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore()
+  const { activeCall, leaveCall } = useCallStore()
+  const activeCallRef = useRef(activeCall)
+
+  useEffect(() => {
+    activeCallRef.current = activeCall
+  }, [activeCall])
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
+
+  useEffect(() => {
+    return () => {
+      if (activeCallRef.current) {
+        void leaveCall()
+      }
+    }
+  }, [leaveCall])
 
   if (isCheckingAuth) return <PageLoader />;
 
@@ -35,6 +52,8 @@ function App() {
           element={<RequirePendingOrGuest><VerifyEmailPage /></RequirePendingOrGuest>}
         />
       </Routes>
+      <CallModal />
+      <IncomingCallToast />
       <Toaster />
     </div>
   )
