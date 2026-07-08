@@ -1,30 +1,53 @@
-import { MessageCircleIcon } from "lucide-react";
+import { MessageCircleIcon, SparklesIcon } from "lucide-react";
 
 const NoChatHistoryPlaceholder = ({ name }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-      <div className="w-16 h-16 bg-gradient-to-br from-cyan-500/20 to-cyan-400/10 rounded-full flex items-center justify-center mb-5">
-        <MessageCircleIcon className="size-8 text-cyan-400" />
-      </div>
-      <h3 className="text-lg font-medium text-slate-200 mb-3">
-        Start your conversation with {name}
-      </h3>
-      <div className="flex flex-col space-y-3 max-w-md mb-5">
-        <p className="text-slate-400 text-sm">
-          This is the beginning of your conversation. Send a message to start chatting!
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="w-full max-w-lg rounded-3xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl p-10 text-center shadow-2xl shadow-cyan-500/5">
+
+        {/* Icon */}
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/20 via-cyan-400/10 to-transparent ring-1 ring-cyan-400/20">
+          <MessageCircleIcon className="h-10 w-10 text-cyan-400" />
+        </div>
+
+        {/* Title */}
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-100">
+          Start chatting with
+        </h2>
+
+        <p className="mt-1 text-xl font-bold text-cyan-300">
+          {name}
         </p>
-        <div className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent mx-auto"></div>
-      </div>
-      <div className="flex flex-wrap gap-2 justify-center">
-        <button className="px-4 py-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 rounded-full hover:bg-cyan-500/20 transition-colors">
-          👋 Say Hello
-        </button>
-        <button className="px-4 py-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 rounded-full hover:bg-cyan-500/20 transition-colors">
-          🤝 How are you?
-        </button>
-        <button className="px-4 py-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 rounded-full hover:bg-cyan-500/20 transition-colors">
-          📅 Meet up soon?
-        </button>
+
+        {/* Description */}
+        <p className="mx-auto mt-5 max-w-sm text-sm leading-6 text-slate-400">
+          Your conversation is empty for now. Send the first message and
+          start connecting instantly.
+        </p>
+
+        {/* Divider */}
+        <div className="my-8 flex items-center justify-center gap-3">
+          <div className="h-px w-16 bg-gradient-to-r from-transparent to-cyan-400/30"></div>
+
+          <SparklesIcon className="h-4 w-4 text-cyan-400/70" />
+
+          <div className="h-px w-16 bg-gradient-to-l from-transparent to-cyan-400/30"></div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap justify-center gap-3">
+          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+            👋 Say Hello
+          </button>
+
+          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+            😊 How are you?
+          </button>
+
+          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+            📅 Meet up soon?
+          </button>
+        </div>
       </div>
     </div>
   );

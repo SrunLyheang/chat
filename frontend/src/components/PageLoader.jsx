@@ -1,5 +1,5 @@
 import { LoaderIcon } from "lucide-react"
-import React from 'react'
+
 
 function PageLoader() {
   return (

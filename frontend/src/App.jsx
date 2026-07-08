@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import ChatPage from './pages/ChatPage'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
@@ -9,6 +9,8 @@ import PageLoader from './components/PageLoader'
 import { RequireAuth, RequireGuest, RequirePendingOrGuest } from './components/RouteGuards'
 
 import { Toaster } from 'react-hot-toast'
+import CallModal from './components/CallModal'
+import IncomingCallToast from './components/IncomingCallToast'
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore()
@@ -35,6 +37,8 @@ function App() {
           element={<RequirePendingOrGuest><VerifyEmailPage /></RequirePendingOrGuest>}
         />
       </Routes>
+      <CallModal />
+      <IncomingCallToast />
       <Toaster />
     </div>
   )
