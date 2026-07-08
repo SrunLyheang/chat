@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, LoaderCircleIcon, PhoneIcon, XIcon } from "lucide-react";
+import { ArrowLeftIcon, LoaderCircleIcon, PhoneIcon, PhoneOffIcon, XIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
@@ -8,7 +8,7 @@ function ChatHeader() {
   const { selectedUser, setSelectedUser, isTyping } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const isOnline = onlineUsers.includes(selectedUser._id)
-  const { startCall, isCallActionPending, callStatus } = useCallStore();
+  const { startCall, leaveCall, activeCall, isCallActionPending, callStatus } = useCallStore();
 
 
   useEffect(() => {
@@ -90,7 +90,7 @@ function ChatHeader() {
 
           type="button"
 
-          onClick={() => startCall(selectedUser)}
+          onClick={() => (activeCall ? leaveCall() : startCall(selectedUser))}
 
           disabled={isCallActionPending}
 
@@ -101,6 +101,10 @@ function ChatHeader() {
           {isCallActionPending && callStatus === "connecting" ? (
 
             <LoaderCircleIcon className="h-5 w-5 animate-spin text-cyan-400" />
+
+          ) : activeCall ? (
+
+            <PhoneOffIcon className="h-5 w-5 text-rose-400 hover:text-rose-300" />
 
           ) : (
 

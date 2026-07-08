@@ -1,6 +1,19 @@
 import { MessageCircleIcon, SparklesIcon } from "lucide-react";
+import { useChatStore } from "../store/useChatStore";
 
 const NoChatHistoryPlaceholder = ({ name }) => {
+  const { sendMessage, selectedUser } = useChatStore();
+
+  const handleQuickAction = async (text) => {
+    if (!selectedUser) return;
+    try {
+      await sendMessage({ text });
+    } catch (error) {
+      console.error("Failed to send quick action message:", error);
+    }
+  };
+
+
   return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="w-full max-w-lg rounded-3xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl p-10 text-center shadow-2xl shadow-cyan-500/5">
@@ -36,15 +49,27 @@ const NoChatHistoryPlaceholder = ({ name }) => {
 
         {/* Quick Actions */}
         <div className="flex flex-wrap justify-center gap-3">
-          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+          <button
+            type="button"
+            onClick={() => handleQuickAction("Say Hello")}
+            className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105"
+          >
             👋 Say Hello
           </button>
 
-          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+          <button
+            type="button"
+            onClick={() => handleQuickAction("How are you?")}
+            className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105"
+          >
             😊 How are you?
           </button>
 
-          <button className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105">
+          <button
+            type="button"
+            onClick={() => handleQuickAction("Meet up soon?")}
+            className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-500/20 hover:scale-105"
+          >
             📅 Meet up soon?
           </button>
         </div>
