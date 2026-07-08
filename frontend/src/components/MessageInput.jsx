@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react';
 import useKeyboardSound from '../../../backend/src/hooks/useKeyboardSound';
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import { toast } from 'react-hot-toast'
 
 const TYPING_TIMEOUT = 1500;
@@ -11,9 +12,24 @@ function MessageInput() {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
+  const textInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled, startTyping, stopTyping } = useChatStore();
+  const {
+    sendMessage,
+    isSoundEnabled,
+    startTyping,
+    stopTyping,
+    replyingTo,
+    clearReplyingTo,
+    selectedUser,
+  } = useChatStore();
+  const { authUser } = useAuthStore();
+
+  const replySenderName = replyingTo?.senderId === authUser?._id ? "You" : selectedUser?.fullName;
+  const replyText = replyingTo?.isDeleted
+    ? "Deleted message"
+    : replyingTo?.text || (replyingTo?.image ? "Photo" : "Message");
 
   const handleTextChange = (e) => {
     setText(e.target.value);
@@ -72,8 +88,39 @@ function MessageInput() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (replyingTo) textInputRef.current?.focus();
+  }, [replyingTo]);
+
   return (
     <div className="p-4 border-t border-slate-700/50">
+      {replyingTo && (
+        <div className="max-w-3xl mx-auto mb-3 flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2">
+          <div className="min-w-0 flex-1 border-l-4 border-slate-500 pl-3">
+            <p className="text-xs font-semibold text-slate-200">
+              Replying to {replySenderName}
+            </p>
+            <p className="truncate text-sm text-slate-400">
+              {replyText}
+            </p>
+          </div>
+          {replyingTo.image && !replyingTo.isDeleted && (
+            <img
+              src={replyingTo.image}
+              alt="Reply"
+              className="h-11 w-11 rounded-md object-cover"
+            />
+          )}
+          <button
+            type="button"
+            onClick={clearReplyingTo}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {imagePreview && (
         <div className="max-w-3xl mx-auto mb-3 flex items-center">
           <div className="relative">
@@ -95,6 +142,7 @@ function MessageInput() {
 
       <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-4">
         <input
+          ref={textInputRef}
           type="text"
           value={text}
           onChange={handleTextChange}

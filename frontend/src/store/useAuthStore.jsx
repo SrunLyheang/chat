@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast'
 import { io } from "socket.io-client"
 import { useChatStore } from "./useChatStore"
 
-
+const toUserId = (value) => (value ? value.toString() : "");
 
 const PENDING_EMAIL_KEY = "pendingVerificationEmail";
 const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : "/";
@@ -190,14 +190,16 @@ export const useAuthStore = create((set, get) => ({
 
     socket.on("newMessage", (message) => {
       const chatStore = useChatStore.getState();
-      const isChatOpen = chatStore.selectedUser?._id === message.senderId;
+      const isChatOpen = toUserId(chatStore.selectedUser?._id) === toUserId(message.senderId);
       if (isChatOpen) return;
 
       const sender =
-        chatStore.chats.find((c) => c._id === message.senderId) ||
-        chatStore.allContacts.find((c) => c._id === message.senderId);
+        chatStore.chats.find((c) => toUserId(c._id) === toUserId(message.senderId)) ||
+        chatStore.allContacts.find((c) => toUserId(c._id) === toUserId(message.senderId));
 
-      if (chatStore.isSoundEnabled) {
+      chatStore.promoteChatForMessage(message, sender, { shouldIncrementUnread: false });
+
+      if (!isChatOpen && chatStore.isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
         notificationSound.currentTime = 0;
         notificationSound.play().catch((e) => console.log("Audio play failed:", e));
@@ -232,8 +234,6 @@ export const useAuthStore = create((set, get) => ({
         ),
         { duration: 4000 }
       );
-
-      chatStore.getMyChatPartners();
     })
   },
   disconnectSocket: () => {
@@ -242,5 +242,4 @@ export const useAuthStore = create((set, get) => ({
 }));
 
 export default useAuthStore
-
 
