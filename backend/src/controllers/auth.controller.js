@@ -345,7 +345,7 @@ export const updateProfile = async (req, res) => {
         const { profilePic } = req.body;
 
         if (!profilePic) return res.status(400).json({ message: "Profile pic is required" })
-        if (typeof profilePic !== "string" || !profilePic.startWith("data:image/")) {
+        if (typeof profilePic !== "string" || !profilePic.startsWith("data:image/")) {
             return res.status(400).json({ message: "Profile pic must be a base64 image" });
         }
 
