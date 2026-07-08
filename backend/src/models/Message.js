@@ -20,6 +20,28 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    replyTo: {
+      messageId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+      },
+      senderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      text: {
+        type: String,
+        trim: true,
+        maxlength: 2000,
+      },
+      image: {
+        type: String,
+      },
+      isDeleted: {
+        type: Boolean,
+        default: false,
+      },
+    },
     isEdited: {
       type: Boolean,
       default: false,
