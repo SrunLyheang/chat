@@ -10,7 +10,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { useCallStore } from "../store/useCallStore";
 
 function CallModal() {
-  const { videoClient, activeCall, handleCallLeft, callStatus, isCallActionPending } = useCallStore();
+  const { videoClient, activeCall, leaveCall, callStatus, isCallActionPending } = useCallStore();
 
   if (!activeCall || !videoClient) {
     if (callStatus === "connecting" || isCallActionPending) {
@@ -37,7 +37,7 @@ function CallModal() {
           <StreamCall call={activeCall}>
             <StreamTheme>
               <SpeakerLayout participantBarPosition="right" />
-              <CallControls onLeave={handleCallLeft} />
+              <CallControls onLeave={leaveCall} />
             </StreamTheme>
           </StreamCall>
         </StreamVideo>

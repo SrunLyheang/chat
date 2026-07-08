@@ -52,6 +52,8 @@ io.on("connection", (socket) => {
         callerId: userId,
         callerName,
       });
+    } else {
+      socket.emit("callFailed", { callId, reason: "user_offline" });
     }
   });
 
