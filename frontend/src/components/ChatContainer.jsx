@@ -5,7 +5,7 @@ import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
-import { MoreVertical, Pencil, Trash2, Check, CheckCheck, X } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, Check, CheckCheck, X, Reply } from "lucide-react";
 
 
 
@@ -19,6 +19,7 @@ function ChatContainer() {
     unsubscribeFromMessages,
     editMessage,
     deleteMessage,
+    setReplyingTo,
 
 
   } = useChatStore();
@@ -27,6 +28,20 @@ function ChatContainer() {
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
   const [enlargedImage, setEnlargedImage] = useState(null);
+
+  const toUserId = (value) => (value ? value.toString() : "");
+
+  const getReplySenderName = (reply) => {
+    if (!reply?.senderId) return "Message";
+    return toUserId(reply.senderId) === toUserId(authUser._id) ? "You" : selectedUser.fullName;
+  };
+
+  const getReplyText = (reply) => {
+    if (reply?.isDeleted) return "Deleted message";
+    if (reply?.text) return reply.text;
+    if (reply?.image) return "Photo";
+    return "Message";
+  };
 
   const startEditing = (msg) => {
     setEditingId(msg._id);
@@ -69,7 +84,7 @@ function ChatContainer() {
         {messages.length > 0 && !isMessagesLoading ? (
           <div className="max-w-3xl mx-auto space-y-6">
             {messages.map((msg) => {
-              const isOwnMessage = msg.senderId === authUser._id;
+              const isOwnMessage = toUserId(msg.senderId) === toUserId(authUser._id);
               const isEditingThis = editingId === msg._id;
 
               return (
@@ -83,8 +98,8 @@ function ChatContainer() {
                       : "bg-slate-800 text-slate-200"
                       }`}
                   >
-                    {isOwnMessage && !msg.isDeleted && !isEditingThis && (
-                      <div className="dropdown dropdown-left absolute -top-2 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {!msg.isDeleted && !isEditingThis && (
+                      <div className={`dropdown absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity ${isOwnMessage ? "dropdown-left right-1" : "dropdown-right left-1"}`}>
                         <label tabIndex={0} className="cursor-pointer">
                           <MoreVertical className="w-4 h-4" />
                         </label>
@@ -92,7 +107,18 @@ function ChatContainer() {
                           tabIndex={0}
                           className="dropdown-content menu menu-sm z-10 mt-1 p-1 shadow bg-slate-900 rounded-box w-32 text-slate-200"
                         >
-                          {msg.text && (
+                          <li>
+                            <button
+                              onClick={() => {
+                                document.activeElement?.blur();
+                                setReplyingTo(msg);
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Reply className="w-3.5 h-3.5" /> Reply
+                            </button>
+                          </li>
+                          {isOwnMessage && msg.text && (
                             <li>
                               <button
                                 onClick={() => {
@@ -105,17 +131,19 @@ function ChatContainer() {
                               </button>
                             </li>
                           )}
-                          <li>
-                            <button
-                              onClick={() => {
-                                document.activeElement?.blur();
-                                deleteMessage(msg._id);
-                              }}
-                              className="flex items-center gap-2 text-red-400"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete
-                            </button>
-                          </li>
+                          {isOwnMessage && (
+                            <li>
+                              <button
+                                onClick={() => {
+                                  document.activeElement?.blur();
+                                  deleteMessage(msg._id);
+                                }}
+                                className="flex items-center gap-2 text-red-400"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </button>
+                            </li>
+                          )}
                         </ul>
                       </div>
                     )}
@@ -124,6 +152,25 @@ function ChatContainer() {
                       <p className="italic opacity-60 text-sm">This message was deleted</p>
                     ) : (
                       <>
+                        {msg.replyTo?.messageId && (
+                          <div className="mb-2 flex items-center gap-2 rounded-md border-l-4 border-slate-400 bg-slate-500/25 px-3 py-2 text-slate-100">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-slate-200">
+                                {getReplySenderName(msg.replyTo)}
+                              </p>
+                              <p className="truncate text-xs text-slate-300">
+                                {getReplyText(msg.replyTo)}
+                              </p>
+                            </div>
+                            {msg.replyTo.image && !msg.replyTo.isDeleted && (
+                              <img
+                                src={msg.replyTo.image}
+                                alt="Reply"
+                                className="h-10 w-10 rounded object-cover"
+                              />
+                            )}
+                          </div>
+                        )}
                         {msg.image && (
                           <img
                             src={msg.image}
