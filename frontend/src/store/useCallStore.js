@@ -5,6 +5,22 @@ import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
 
 let clientPromise = null;
+let ringtoneAudio = null;
+
+function startRinging() {
+  stopRinging(); // just in case one is already playing
+  ringtoneAudio = new Audio("/sounds/ringtone.mp3");
+  ringtoneAudio.loop = true;
+  ringtoneAudio.play().catch((e) => console.log("Ringtone play failed:", e));
+}
+
+function stopRinging() {
+  if (ringtoneAudio) {
+    ringtoneAudio.pause();
+    ringtoneAudio.currentTime = 0;
+    ringtoneAudio = null;
+  }
+}
 
 export const useCallStore = create((set, get) => ({
   videoClient: null,
@@ -47,13 +63,18 @@ export const useCallStore = create((set, get) => ({
   startCall: async (otherUser) => {
     const { activeCall, isCallActionPending, callPeerId } = get();
     if (activeCall || isCallActionPending || callPeerId) return;
-
+    const { onlineUsers } = useAuthStore.getState();
+    if (!onlineUsers.includes(otherUser._id)) {
+      toast.error(`${otherUser.fullName} is offline right now`);
+      return;
+    }
     set({ isCallActionPending: true, callStatus: "connecting", callPeerId: otherUser._id });
 
     try {
       const client = await get().initVideoClient();
       const { authUser } = useAuthStore.getState();
-      const callId = get().getCallId(authUser._id, otherUser._id);
+      const callId = crypto.randomUUID();
+
       const call = client.call("default", callId);
 
       await call.join({ create: true });
@@ -73,7 +94,7 @@ export const useCallStore = create((set, get) => ({
     if (!incomingCall || activeCall || isCallActionPending) return;
 
     set({ isCallActionPending: true, callStatus: "connecting", callPeerId: incomingCall.callerId });
-
+    stopRinging();
     try {
       const client = await get().initVideoClient();
       const call = client.call("default", incomingCall.callId);
@@ -98,7 +119,7 @@ export const useCallStore = create((set, get) => ({
   declineCall: () => {
     const { incomingCall, isCallActionPending } = get();
     if (!incomingCall || isCallActionPending) return;
-
+    stopRinging();
     const socket = useAuthStore.getState().socket;
     if (incomingCall) {
       socket?.emit("declineCall", { receiverId: incomingCall.callerId });
@@ -107,9 +128,13 @@ export const useCallStore = create((set, get) => ({
     set({ incomingCall: null, isCallActionPending: false, callStatus: "idle", callPeerId: null });
   },
 
-  setIncomingCall: (payload) => set({ incomingCall: payload, callStatus: "incoming" }),
+  setIncomingCall: (payload) => {
+    startRinging();
+    set({ incomingCall: payload, callStatus: "incoming" });
+  },
 
   leaveCall: async () => {
+    stopRinging();
     const { activeCall, callPeerId } = get();
     if (!activeCall) {
       set({ activeCall: null, incomingCall: null, callPeerId: null, isCallActionPending: false, callStatus: "idle" });
@@ -133,6 +158,7 @@ export const useCallStore = create((set, get) => ({
   },
 
   handleCallLeft: () => {
+    stopRinging();
     set({ activeCall: null, incomingCall: null, callPeerId: null, isCallActionPending: false, callStatus: "idle" });
   },
 }));

@@ -3,6 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCallStore } from "../store/useCallStore";
+import toast from "react-hot-toast";
 
 function ChatHeader() {
   const { selectedUser, setSelectedUser, isTyping } = useChatStore();
@@ -87,31 +88,29 @@ function ChatHeader() {
       <div className="flex items-center gap-2">
 
         <button
-
           type="button"
-
-          onClick={() => (activeCall ? leaveCall() : startCall(selectedUser))}
-
+          onClick={() => {
+            if (activeCall) {
+              leaveCall();
+              return;
+            }
+            if (!isOnline) {
+              toast.error("User is offline, cannot call");
+              return;
+            }
+            startCall(selectedUser);
+          }}
           disabled={isCallActionPending}
-
-          className="rounded-full p-2 transition hover:bg-slate-700/70 disabled:cursor-not-allowed disabled:opacity-70"
-
+          className={`rounded-full p-2 transition hover:bg-slate-700/70 disabled:cursor-not-allowed disabled:opacity-70 ${!isOnline && !activeCall ? "opacity-40 cursor-not-allowed" : ""
+            }`}
         >
-
           {isCallActionPending && callStatus === "connecting" ? (
-
             <LoaderCircleIcon className="h-5 w-5 animate-spin text-cyan-400" />
-
           ) : activeCall ? (
-
             <PhoneOffIcon className="h-5 w-5 text-rose-400 hover:text-rose-300" />
-
           ) : (
-
-            <PhoneIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
-
+            <PhoneIcon className={`h-5 w-5 ${isOnline ? "text-slate-400 hover:text-slate-200" : "text-slate-600"}`} />
           )}
-
         </button>
 
         {/* Mobile */}
