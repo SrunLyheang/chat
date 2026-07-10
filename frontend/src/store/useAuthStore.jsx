@@ -213,9 +213,6 @@ export const useAuthStore = create((set, get) => ({
         useCallStore.getState().handleCallLeft();
       });
     });
-    socket.on("botRateLimited", ({ botId, until }) => {
-      useChatStore.getState().setBotRateLimited(botId, until);
-    });
 
     socket.on("newMessage", (message) => {
       const chatStore = useChatStore.getState();
