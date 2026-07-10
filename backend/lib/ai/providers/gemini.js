@@ -24,10 +24,11 @@ export async function generateReply(model, userMessage, attempt = 1) {
   } catch (error) {
     const errorMessage = error.message || "";
     const isOverloaded = errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
+    const isTimeout = errorMessage.includes("DEADLINE_EXCEEDED") || errorMessage.includes("504");
     const isRateLimited = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
 
-    if (isOverloaded && attempt < 3) {
-      console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
+    if ((isOverloaded || isTimeout) && attempt < 3) {
+      console.log(`Gemini ${isTimeout ? "timed out" : "overloaded"}, retrying (attempt ${attempt + 1})...`);
       await sleep(attempt * 1000); // wait 1s, then 2s
       return generateReply(model, userMessage, attempt + 1);
     }
@@ -38,7 +39,7 @@ export async function generateReply(model, userMessage, attempt = 1) {
       return "I've hit my message limit for right now! Please try me again a little later.";
     }
 
-    return isOverloaded
+    return isOverloaded || isTimeout
       ? "I'm getting a lot of requests right now — try me again in a moment!"
       : "Sorry, I'm having trouble responding right now.";
   }

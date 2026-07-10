@@ -1,0 +1,133 @@
+diff --git a/backend/lib/ai/index.js b/backend/lib/ai/index.js
+index a8ae79d..b036a38 100644
+--- a/backend/lib/ai/index.js
++++ b/backend/lib/ai/index.js
+@@ -15,8 +15,10 @@ const PROVIDERS = {
+  * @param {string} bot.model - the specific model string for that provider,
+  *   e.g. "gemini-3.5-flash" or "llama-3.3-70b-versatile"
+  * @param {string} userMessage
++ * @param {Array<{role: "user"|"assistant", text: string}>} history - prior
++ *   turns in this conversation, oldest first, NOT including userMessage
+  */
+-export async function getBotReply(bot, userMessage) {
++export async function getBotReply(bot, userMessage, history = []) {
+   const provider = PROVIDERS[bot.provider];
+ 
+   if (!provider) {
+@@ -26,5 +28,5 @@ export async function getBotReply(bot, userMessage) {
+ 
+   }
+ 
+-  return provider.generateReply(bot.model, userMessage);
++  return provider.generateReply(bot.model, userMessage, history);
+ }
+diff --git a/backend/lib/ai/providers/gemini.js b/backend/lib/ai/providers/gemini.js
+index 997462d..10be9b2 100644
+--- a/backend/lib/ai/providers/gemini.js
++++ b/backend/lib/ai/providers/gemini.js
+@@ -8,12 +8,21 @@ function sleep(ms) {
+   return new Promise((resolve) => setTimeout(resolve, ms));
+ }
+ 
+-// Every provider exports the same shape: generateReply(model, userMessage) -> string
+-export async function generateReply(model, userMessage, attempt = 1) {
++// Every provider exports the same shape: generateReply(model, userMessage, history) -> string
++export async function generateReply(model, userMessage, history = [], attempt = 1) {
+   try {
++    // Gemini calls the assistant's turns "model", not "assistant" like OpenAI/Groq.
++    const contents = [
++      ...history.map((turn) => ({
++        role: turn.role === "user" ? "user" : "model",
++        parts: [{ text: turn.text }],
++      })),
++      { role: "user", parts: [{ text: userMessage }] },
++    ];
++
+     const response = await ai.models.generateContent({
+       model,
+-      contents: userMessage,
++      contents,
+       config: {
+         systemInstruction: SYSTEM_PROMPT,
+         maxOutputTokens: 256,
+@@ -29,7 +38,7 @@ export async function generateReply(model, userMessage, attempt = 1) {
+     if (isOverloaded && attempt < 3) {
+       console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
+       await sleep(attempt * 1000); // wait 1s, then 2s
+-      return generateReply(model, userMessage, attempt + 1);
++      return generateReply(model, userMessage, history, attempt + 1);
+     }
+ 
+     console.log("Gemini error:", errorMessage);
+diff --git a/backend/lib/ai/providers/groq.js b/backend/lib/ai/providers/groq.js
+index 1d2ce68..14e939a 100644
+--- a/backend/lib/ai/providers/groq.js
++++ b/backend/lib/ai/providers/groq.js
+@@ -7,8 +7,8 @@ function sleep(ms) {
+   return new Promise((resolve) => setTimeout(resolve, ms));
+ }
+ 
+-// Every provider exports the same shape: generateReply(model, userMessage) -> string
+-export async function generateReply(model, userMessage, attempt = 1) {
++// Every provider exports the same shape: generateReply(model, userMessage, history) -> string
++export async function generateReply(model, userMessage, history = [], attempt = 1) {
+   try {
+     const controller = new AbortController();
+     const timeout = setTimeout(() => controller.abort(), 15_000);
+@@ -23,6 +23,10 @@ export async function generateReply(model, userMessage, attempt = 1) {
+         model,
+         messages: [
+           { role: "system", content: SYSTEM_PROMPT },
++          ...history.map((turn) => ({
++            role: turn.role === "user" ? "user" : "assistant",
++            content: turn.text,
++          })),
+           { role: "user", content: userMessage },
+         ],
+         max_tokens: 256,
+@@ -49,7 +53,7 @@ export async function generateReply(model, userMessage, attempt = 1) {
+     if (isOverloaded && attempt < 3) {
+       console.log(`Groq overloaded, retrying (attempt ${attempt + 1})...`);
+       await sleep(attempt * 1000); // wait 1s, then 2s
+-      return generateReply(model, userMessage, attempt + 1);
++      return generateReply(model, userMessage, history, attempt + 1);
+     }
+ 
+     console.log("Groq error:", error.message || error);
+diff --git a/backend/src/controllers/message.controller.js b/backend/src/controllers/message.controller.js
+index dc96fbb..7a4f0aa 100644
+--- a/backend/src/controllers/message.controller.js
++++ b/backend/src/controllers/message.controller.js
+@@ -148,7 +148,31 @@ export const sendMessage = async (req, res) => {
+ 
+     if (receiver.isBot && text) {
+       const bot = { provider: receiver.botProvider, model: receiver.botModel };
+-      void getBotReply(bot, text).then(async (replyText) => {
++
++      // Pull recent turns from this conversation so the bot has memory.
++      // Capped at 20 messages (~10 back-and-forth exchanges) to keep prompts
++      // small — Groq's free tier charges tokens per request either way.
++      const recentMessages = await Message.find({
++        _id: { $ne: newMessage._id },
++        $or: [
++          { senderId, receiverId },
++          { senderId: receiverId, receiverId: senderId },
++        ],
++        isDeleted: { $ne: true },
++        text: { $exists: true, $ne: null },
++      })
++        .sort({ createdAt: -1 })
++        .limit(20)
++        .select("senderId text");
++
++      const history = recentMessages
++        .reverse()
++        .map((m) => ({
++          role: m.senderId.toString() === senderId.toString() ? "user" : "assistant",
++          text: m.text,
++        }));
++
++      void getBotReply(bot, text, history).then(async (replyText) => {
+         const botMessage = new Message({
+           senderId: receiverId,
+           receiverId: senderId,

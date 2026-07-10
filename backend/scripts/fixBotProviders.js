@@ -11,7 +11,14 @@ await connectDB();
 
 const brokenBots = await User.find({
   isBot: true,
-  $or: [{ botProvider: { $exists: false } }, { botProvider: null }, { botProvider: "" }],
+  $or: [
+    { botProvider: { $exists: false } },
+    { botProvider: null },
+    { botProvider: "" },
+    { botModel: { $exists: false } },
+    { botModel: null },
+    { botModel: "" },
+  ],
 });
 
 if (brokenBots.length === 0) {
