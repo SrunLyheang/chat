@@ -7,7 +7,7 @@ const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile, isUpdatingProfile } = useAuthStore();
-  const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser, rateLimitedBots } = useChatStore();
+  const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser } = useChatStore();
   const [selectedImg, setSelectedImg] = useState(null);
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
 
@@ -113,26 +113,19 @@ function ProfileHeader() {
 
               {isBotMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg z-20 overflow-hidden">
-                  {bots.map((bot) => {
-                    const limitedUntil = rateLimitedBots[bot._id];
-                    const isLimited = limitedUntil && new Date(limitedUntil) > new Date();
-                    return (
-                      <button
-                        key={bot._id}
-                        type="button"
-                        onClick={() => selectBot(bot)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 transition-colors"
-                      >
-                        <div className="size-7 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                          <BotIcon className="size-4 text-white" />
-                        </div>
-                        <span className="flex-1 truncate">{bot.fullName}</span>
-                        {isLimited && (
-                          <span className="size-2 rounded-full bg-red-500 shrink-0" title="Message limit reached" />
-                        )}
-                      </button>
-                    );
-                  })}
+                  {bots.map((bot) => (
+                    <button
+                      key={bot._id}
+                      type="button"
+                      onClick={() => selectBot(bot)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="size-7 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                        <BotIcon className="size-4 text-white" />
+                      </div>
+                      <span className="flex-1 truncate">{bot.fullName}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

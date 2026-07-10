@@ -5,7 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { SearchIcon, BotIcon } from "lucide-react";
 
 function ContactList() {
-  const { getAllContacts, allContacts, setSelectedUser, isUserLoading } = useChatStore();
+  const { getAllContacts, allContacts, setSelectedUser, selectedUser, isUserLoading } = useChatStore();
   const { onlineUsers, authUser } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -23,12 +23,11 @@ function ContactList() {
   const humanContacts = contactsExcludingSelf.filter((c) => !c.isBot);
 
   const search = searchTerm.trim().toLowerCase();
-  const filteredContacts = humanContacts.filter((contact) =>
-    contact.fullName.toLowerCase().includes(search)
-  );
-  const filteredBots = botContacts.filter((bot) =>
-    bot.fullName.toLowerCase().includes(search)
-  );
+  const matchesSearch = (user) =>
+    user.fullName.toLowerCase().includes(search) ||
+    (user.nickname || "").toLowerCase().includes(search);
+  const filteredContacts = humanContacts.filter(matchesSearch);
+  const filteredBots = botContacts.filter(matchesSearch);
 
   return (
     <>
@@ -46,7 +45,10 @@ function ContactList() {
       {filteredBots.map((bot) => (
         <div
           key={bot._id}
-          className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors mb-2 border border-cyan-500/20"
+          className={`p-4 rounded-lg cursor-pointer transition-colors mb-2 border ${selectedUser?._id === bot._id
+            ? "border-cyan-400/60 bg-cyan-500/15 shadow-sm shadow-cyan-500/10"
+            : "border-transparent hover:bg-slate-800/70"
+            }`}
           onClick={() => setSelectedUser(bot)}
         >
           <div className="flex items-center gap-3">
@@ -69,7 +71,10 @@ function ContactList() {
         filteredContacts.map((contact) => (
           <div
             key={contact._id}
-            className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors"
+            className={`p-4 rounded-lg cursor-pointer transition-colors border ${selectedUser?._id === contact._id
+              ? "border-cyan-400/60 bg-cyan-500/15 shadow-sm shadow-cyan-500/10"
+              : "border-transparent hover:bg-slate-800/70"
+              }`}
             onClick={() => setSelectedUser(contact)}
           >
             <div className="flex items-center gap-3">
@@ -78,7 +83,14 @@ function ContactList() {
                   <img src={contact.profilePic || "/avatar.png"} />
                 </div>
               </div>
-              <h4 className="text-slate-200 font-medium">{contact.fullName}</h4>
+              <div className="min-w-0">
+                <h4 className="truncate text-slate-200 font-medium">
+                  {contact.nickname?.trim() || contact.fullName}
+                </h4>
+                {contact.nickname?.trim() && (
+                  <p className="truncate text-xs text-slate-500">{contact.fullName}</p>
+                )}
+              </div>
             </div>
           </div>
         ))
