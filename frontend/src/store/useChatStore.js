@@ -36,6 +36,10 @@ export const useChatStore = create((set, get) => ({
   isSoundEnabled: localStorage.getItem('isSoundEnabled') === 'true',
   isTyping: false, // Fixed: Capitalized 'S' to match toggleSound
   isBotThinking: false,
+  rateLimitedBots: {},
+  setBotRateLimited: (botId, until) => set((state) => ({
+    rateLimitedBots: { ...state.rateLimitedBots, [botId]: until },
+  })),
 
   toggleSound: () => {
     const nextSoundState = !get().isSoundEnabled;
@@ -120,7 +124,11 @@ export const useChatStore = create((set, get) => ({
     set({ isUserLoading: true });
     try {
       const res = await axiosInstance.get("/messages/contacts");
-      set({ allContacts: res.data });
+      const rateLimitedBots = {};
+      res.data.forEach((contact) => {
+        if (contact.isBot && contact.rateLimitedUntil) rateLimitedBots[contact._id] = contact.rateLimitedUntil;
+      });
+      set((state) => ({ allContacts: res.data, rateLimitedBots: { ...state.rateLimitedBots, ...rateLimitedBots } }));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load contacts");
     } finally {
@@ -232,12 +240,7 @@ export const useChatStore = create((set, get) => ({
         { shouldIncrementUnread: shouldNotify }
       );
 
-      if (shouldNotify && get().isSoundEnabled) {
-        const notificationSound = new Audio("/sounds/notification.mp3");
 
-        notificationSound.currentTime = 0; // reset to start
-        notificationSound.play().catch((e) => console.log("Audio play failed:", e));
-      }
     };
     socket.on("newMessage", newMessageHandler);
 

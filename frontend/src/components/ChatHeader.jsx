@@ -6,9 +6,11 @@ import { useCallStore } from "../store/useCallStore";
 import toast from "react-hot-toast";
 
 function ChatHeader() {
-  const { selectedUser, setSelectedUser, isTyping, isBotThinking } = useChatStore();
+  const { selectedUser, setSelectedUser, isTyping, isBotThinking, rateLimitedBots } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const isOnline = onlineUsers.includes(selectedUser._id)
+  const limitedUntil = rateLimitedBots[selectedUser._id];
+  const isBotLimited = selectedUser.isBot && limitedUntil && new Date(limitedUntil) > new Date();
   const { startCall, leaveCall, activeCall, isCallActionPending, callStatus } = useCallStore();
 
 
@@ -51,7 +53,11 @@ function ChatHeader() {
 
           <p className="text-slate-400 text-sm">
             {selectedUser.isBot ? (
-              isBotThinking ? (
+              isBotLimited ? (
+                <span className="text-rose-400 font-medium">
+                  Rate limited until {new Date(limitedUntil).toLocaleTimeString()}
+                </span>
+              ) : isBotThinking ? (
                 <span className="text-blue-400 inline-flex items-center gap-1">
                   AI is thinking
                   <span className="inline-flex gap-0.5">
