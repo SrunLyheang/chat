@@ -23,6 +23,8 @@ export async function getBotReply(userMessage, attempt = 1) {
       contents: userMessage,
       config: {
         systemInstruction: SYSTEM_PROMPT,
+        maxOutputTokens: 256,
+        httpOptions: { timeout: 15_000 },
       },
     });
     return response.text || "Sorry, I couldn't come up with a reply.";
