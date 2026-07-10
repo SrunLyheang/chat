@@ -14,6 +14,7 @@
   "dependencies": {
     "@arcjet/inspect": "^1.5.0",
     "@arcjet/node": "^1.5.0",
+    "@google/genai": "^2.11.0",
     "@stream-io/node-sdk": "^0.7.62",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",

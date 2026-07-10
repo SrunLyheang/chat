@@ -3,6 +3,8 @@ import { uploadImage } from "../../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import { ENV } from "../../lib/env.js";
+import { getBotReply } from "../../lib/gemini.js";
 
 const getPreviewText = (message, currentUserId) => {
   if (!message) return "";
@@ -137,12 +139,26 @@ export const sendMessage = async (req, res) => {
       replyTo: replySnapshot,
     });
     await newMessage.save();
-
     const receiverSocketId = getReceiverSocketId(receiverId)
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage)
     }
     res.status(201).json(newMessage);
+    if (receiverId === ENV.BOT_USER_ID && text) {
+      getBotReply(text).then(async (replyText) => {
+        const botMessage = new Message({
+          senderId: ENV.BOT_USER_ID,
+          receiverId: senderId,
+          text: replyText,
+        });
+        await botMessage.save();
+
+        const userSocketId = getReceiverSocketId(senderId);
+        if (userSocketId) {
+          io.to(userSocketId).emit("newMessage", botMessage);
+        }
+      });
+    }
 
   } catch (error) {
     console.log("Error in sendMessage controller : ", error.message);

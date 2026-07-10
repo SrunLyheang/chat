@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        isBot: {
+            type: Boolean,
+            default: false
+        },
         password: {
             type: String,
             required: true,
