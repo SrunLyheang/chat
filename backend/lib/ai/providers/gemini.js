@@ -23,9 +23,11 @@ export async function generateReply(model, userMessage, attempt = 1) {
     return { text: response.text || "Sorry, I couldn't come up with a reply.", rateLimited: false };
   } catch (error) {
     const errorMessage = error.message || "";
-    const isOverloaded = errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
-    const isRateLimited = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
-
+    const status = Number(error?.status);
+    const isOverloaded =
+      status === 503 || errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
+    const isRateLimited =
+      status === 429 || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("429");
     if (isOverloaded && attempt < 3) {
       console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
       await sleep(attempt * 1000);

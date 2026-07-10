@@ -39,6 +39,7 @@ export const useChatStore = create((set, get) => ({
   rateLimitedBots: {},
   setBotRateLimited: (botId, until) => set((state) => ({
     rateLimitedBots: { ...state.rateLimitedBots, [botId]: until },
+    isBotThinking: state.selectedUser?._id?.toString() === botId?.toString() ? false : state.isBotThinking,
   })),
 
   toggleSound: () => {
@@ -128,7 +129,7 @@ export const useChatStore = create((set, get) => ({
       res.data.forEach((contact) => {
         if (contact.isBot && contact.rateLimitedUntil) rateLimitedBots[contact._id] = contact.rateLimitedUntil;
       });
-      set((state) => ({ allContacts: res.data, rateLimitedBots: { ...state.rateLimitedBots, ...rateLimitedBots } }));
+      set({ allContacts: res.data, rateLimitedBots });
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load contacts");
     } finally {
