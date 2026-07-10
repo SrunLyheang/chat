@@ -20,8 +20,8 @@ function ChatContainer() {
     editMessage,
     deleteMessage,
     setReplyingTo,
-
-
+    isTyping,
+    isBotThinking,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null)
@@ -73,7 +73,7 @@ function ChatContainer() {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isTyping, isBotThinking]);
 
 
 
@@ -224,12 +224,21 @@ function ChatContainer() {
                 </div>
               );
             })}
+            {((selectedUser.isBot && isBotThinking) || (!selectedUser.isBot && isTyping)) && (
+              <div className="chat chat-start">
+                <div
+                  className={`chat-bubble flex items-center gap-1 ${selectedUser.isBot ? "bg-slate-800 text-blue-300" : "bg-slate-800 text-slate-200"
+                    }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-2 h-2 rounded-full bg-current animate-bounce" />
+                </div>
+              </div>
+            )}
+
             {/* Scroll */}
             <div ref={messageEndRef} />
-
-
-
-
           </div>
 
         ) : isMessagesLoading ? <MessagesLoadingSkeleton /> : (
