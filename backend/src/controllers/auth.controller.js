@@ -39,7 +39,6 @@ export const signup = async (req, res) => {
             return res.status(400).json({ message: "Password must be at least 6 characters" })
         }
 
-        // check email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(normalizedEmail)) {
             return res.status(400).json({ message: "Invalid email format" });
@@ -47,10 +46,6 @@ export const signup = async (req, res) => {
 
         const existing = await User.findOne({ email: normalizedEmail });
 
-        // --- FIX #1: "Email in use" trap ---
-        // If the existing record is already verified, it's a real account -> reject as before.
-        // If it's NOT verified, it's just a leftover from an abandoned signup attempt:
-        // update it in place and send a fresh code, instead of blocking the user.
         if (existing) {
             if (existing.isEmailVerified) {
                 return res.status(409).json({ message: "Email already in use" });
@@ -60,15 +55,8 @@ export const signup = async (req, res) => {
                 existing.verificationTokenExpiry && new Date() > existing.verificationTokenExpiry;
 
             if (isExpired) {
-                // They never finished verifying and their code has lapsed.
-                // Don't wait on Mongo's TTL sweep (it runs ~once/minute) —
-                // wipe the stale record now and fall through to the
-                // "brand-new user" path below with a clean attempt budget.
                 await User.deleteOne({ _id: existing._id });
             } else {
-                // Still within the active verification window — same rate
-                // limit as a manual resend applies, so this path can't be
-                // used to bypass Issue #3's email cap.
                 if (existing.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
                     return res.status(429).json({
                         message:
@@ -88,6 +76,18 @@ export const signup = async (req, res) => {
                 const verificationCode = generateVerificationCode();
                 const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_WINDOW_MS);
 
+                // Send BEFORE persisting the attempt/cooldown — if Resend fails,
+                // the user shouldn't burn one of their 5 attempts for an email
+                // that never arrived.
+                try {
+                    await sendVerificationEmail(normalizedEmail, name, verificationCode);
+                } catch (err) {
+                    console.error("Failed to send verification email:", err);
+                    return res.status(502).json({
+                        message: "Couldn't send the verification email right now. Please try again in a moment.",
+                    });
+                }
+
                 existing.fullName = name;
                 existing.password = hashedPassword;
                 existing.verificationToken = verificationCode;
@@ -97,26 +97,32 @@ export const signup = async (req, res) => {
 
                 const savedUser = await existing.save();
 
-                res.status(200).json({
+                return res.status(200).json({
                     _id: savedUser._id,
                     fullName: savedUser.fullName,
                     email: savedUser.email,
                     message: "Signup successful! Please verify your email.",
                 });
-
-                sendVerificationEmail(savedUser.email, savedUser.fullName, verificationCode)
-                    .catch((err) => console.error("Failed to send verification email:", err));
-
-                return;
             }
         }
 
-        // Brand-new user — original flow, just also seeding the rate-limit fields
+        // Brand-new user
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(pass, salt)
 
         const verificationCode = generateVerificationCode();
         const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_WINDOW_MS);
+
+        // Send BEFORE creating the account — if Resend fails, there's no point
+        // creating a user who can never receive their code.
+        try {
+            await sendVerificationEmail(normalizedEmail, name, verificationCode);
+        } catch (err) {
+            console.error("Failed to send verification email:", err);
+            return res.status(502).json({
+                message: "Couldn't send the verification email right now. Please try again in a moment.",
+            });
+        }
 
         const newUser = new User({
             fullName: name,
@@ -138,12 +144,7 @@ export const signup = async (req, res) => {
             message: "Signup successful! Please verify your email."
         });
 
-
-        sendVerificationEmail(savedUser.email, savedUser.fullName, verificationCode)
-            .catch((err) => console.error("Failed to send verification email:", err));
-
     } catch (error) {
-
         if (error?.code === 11000) {
             return res.status(409).json({ message: "Email already in use" });
         }
@@ -183,6 +184,16 @@ export const resendVerification = async (req, res) => {
         }
 
         const verificationCode = generateVerificationCode();
+
+        try {
+            await sendVerificationEmail(user.email, user.fullName, verificationCode);
+        } catch (err) {
+            console.error("Failed to resend verification email:", err);
+            return res.status(502).json({
+                message: "Couldn't send the verification email right now. Please try again in a moment.",
+            });
+        }
+
         user.verificationToken = verificationCode;
         user.verificationTokenExpiry = new Date(Date.now() + VERIFICATION_WINDOW_MS);
         user.verificationAttempts += 1;
@@ -193,9 +204,6 @@ export const resendVerification = async (req, res) => {
             message: "Verification email resent.",
             attemptsRemaining: Math.max(MAX_VERIFICATION_ATTEMPTS - user.verificationAttempts, 0),
         });
-
-        sendVerificationEmail(user.email, user.fullName, verificationCode)
-            .catch((err) => console.error("Failed to resend verification email:", err));
 
     } catch (error) {
         console.error("Error in resendVerification controller:", error);

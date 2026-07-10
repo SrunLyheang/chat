@@ -15,8 +15,10 @@ const PROVIDERS = {
  * @param {string} bot.model - the specific model string for that provider,
  *   e.g. "gemini-3.5-flash" or "llama-3.3-70b-versatile"
  * @param {string} userMessage
+ * @param {Array<{role: "user"|"assistant", text: string}>} history - prior
+ *   turns in this conversation, oldest first, NOT including userMessage
  */
-export async function getBotReply(bot, userMessage) {
+export async function getBotReply(bot, userMessage, history = []) {
   const provider = PROVIDERS[bot.provider];
 
   if (!provider) {
@@ -26,5 +28,5 @@ export async function getBotReply(bot, userMessage) {
 
   }
 
-  return provider.generateReply(bot.model, userMessage);
+  return provider.generateReply(bot.model, userMessage, history);
 }

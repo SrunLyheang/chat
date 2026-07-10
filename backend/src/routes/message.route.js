@@ -1,6 +1,6 @@
 import express from "express";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js"
-import { getAllContacts, getChatPartners, getMessagesByUserId, sendMessage, editMessage, deleteMessage } from "../controllers/message.controller.js";
+import { getAllContacts, getChatPartners, getMessagesByUserId, sendMessage, editMessage, deleteMessage, togglePinMessage, setNickname, togglePinChat } from "../controllers/message.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
@@ -10,8 +10,11 @@ router.use(arcjetProtection, protectRoute);
 
 router.get("/contacts", getAllContacts);
 router.get("/chats", getChatPartners);
+router.put("/contacts/:id/nickname", setNickname);
+router.put("/contacts/:id/pin", togglePinChat);
 router.get("/:id", getMessagesByUserId);
 router.post("/send/:id", sendMessage);
+router.put("/:id/pin", togglePinMessage);
 router.put("/:id", editMessage);
 router.delete("/:id", deleteMessage);
 

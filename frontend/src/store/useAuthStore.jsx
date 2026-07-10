@@ -3,6 +3,7 @@ import { axiosInstance } from "../lib/axios"
 import { toast } from 'react-hot-toast'
 import { io } from "socket.io-client"
 import { useChatStore } from "./useChatStore"
+import { BotIcon } from "lucide-react"
 
 const toUserId = (value) => (value ? value.toString() : "");
 
@@ -243,11 +244,17 @@ export const useAuthStore = create((set, get) => ({
             }}
             className="max-w-sm w-full bg-slate-800 border border-slate-700/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/80 transition-colors"
           >
-            <img
-              src={sender?.profilePic || "/avatar.png"}
-              alt={sender?.fullName || "New message"}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            />
+            {sender?.isBot ? (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                <BotIcon className="w-5 h-5 text-white" />
+              </div>
+            ) : (
+              <img
+                src={sender?.profilePic || "/avatar.png"}
+                alt={sender?.fullName || "New message"}
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+              />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-slate-100 font-medium text-sm truncate">
                 {sender?.fullName || "New message"}
