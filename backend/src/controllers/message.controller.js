@@ -89,7 +89,7 @@ export const sendMessage = async (req, res) => {
     }
     // Fetch the receiver once — used for both the existence check and,
     // if it's a bot, to know which provider/model to reply with.
-    const receiver = await User.findById(receiverId).select("isBot botProvider botModel rateLimitedUntil");
+    const receiver = await User.findById(receiverId).select("isBot botProvider botModel");
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
     }
@@ -147,35 +147,24 @@ export const sendMessage = async (req, res) => {
     res.status(201).json(newMessage);
 
     if (receiver.isBot && text) {
-      if (receiver.rateLimitedUntil && receiver.rateLimitedUntil > new Date()) {
+      const bot = { provider: receiver.botProvider, model: receiver.botModel };
+      void getBotReply(bot, text).then(async (replyText) => {
         const botMessage = new Message({
           senderId: receiverId,
           receiverId: senderId,
-          text: "Bot has hit message limit can not chat now",
+          text: replyText,
         });
         await botMessage.save();
+
         const userSocketId = getReceiverSocketId(senderId);
-        if (userSocketId) io.to(userSocketId).emit("newMessage", botMessage);
-      } else {
-        const bot = { provider: receiver.botProvider, model: receiver.botModel };
-        void getBotReply(bot, text).then(async ({ text: replyText, rateLimited, retryAfterSeconds }) => {
-          if (rateLimited) {
-            const until = new Date(Date.now() + (retryAfterSeconds || 60) * 1000);
-            await User.findByIdAndUpdate(receiverId, { rateLimitedUntil: until });
-            io.emit("botRateLimited", { botId: receiverId.toString(), until });
-          }
-
-          const botMessage = new Message({ senderId: receiverId, receiverId: senderId, text: replyText });
-          await botMessage.save();
-
-          const userSocketId = getReceiverSocketId(senderId);
-          if (userSocketId) io.to(userSocketId).emit("newMessage", botMessage);
-        }).catch((error) => {
-          console.error("Failed to generate bot reply:", error);
-          const userSocketId = getReceiverSocketId(senderId);
-          if (userSocketId) io.to(userSocketId).emit("botReplyFailed");
-        });
-      }
+        if (userSocketId) {
+          io.to(userSocketId).emit("newMessage", botMessage);
+        }
+      }).catch((error) => {
+        console.error("Failed to generate bot reply:", error);
+        const userSocketId = getReceiverSocketId(senderId);
+        if (userSocketId) io.to(userSocketId).emit("botReplyFailed");
+      });
     }
 
   } catch (error) {

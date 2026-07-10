@@ -12,7 +12,7 @@ import User from "../src/models/User.js";
 const [, , emailArg, nameArg, providerArg, modelArg] = process.argv;
 
 const email = emailArg || "bot@yourapp.local";
-const fullName = nameArg || "Gemini Bot";
+const fullName = nameArg || "AI Assistant";
 const botProvider = providerArg || "gemini";
 const botModel = modelArg || "gemini-3.5-flash";
 
