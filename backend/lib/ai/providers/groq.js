@@ -13,35 +13,38 @@ export async function generateReply(model, userMessage, attempt = 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
-    const res = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ENV.GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 256,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    try {
+      const res = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ENV.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage },
+          ],
+          max_tokens: 256,
+        }),
+        signal: controller.signal,
+      });
 
-    if (!res.ok) {
-      const status = res.status;
-      const retryAfterHeader = res.headers.get("retry-after");
-      const body = await res.text().catch(() => "");
-      const error = new Error(`Groq ${status}: ${body}`);
-      error.status = status;
-      error.retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : null;
-      throw error;
+      if (!res.ok) {
+        const status = res.status;
+        const retryAfterHeader = res.headers.get("retry-after");
+        const body = await res.text().catch(() => "");
+        const error = new Error(`Groq ${status}: ${body}`);
+        error.status = status;
+        error.retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : null;
+        throw error;
+      }
+
+      const data = await res.json();
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = await res.json();
     const text = data.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't come up with a reply.";
     return { text, rateLimited: false };
   } catch (error) {

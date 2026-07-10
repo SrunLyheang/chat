@@ -154,7 +154,7 @@ function MessageInput() {
           onChange={handleTextChange}
           disabled={isBotLimited}
           className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
-          placeholder={isBotLimited ? "Bot has hit message limit, can not chat now" : "Type your message..."}
+          placeholder={isBotLimited ? "Message limit reached — try again later" : "Type your message..."}
         />
         <input
           type="file"

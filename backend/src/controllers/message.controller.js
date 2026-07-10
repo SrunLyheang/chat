@@ -89,7 +89,7 @@ export const sendMessage = async (req, res) => {
     }
     // Fetch the receiver once — used for both the existence check and,
     // if it's a bot, to know which provider/model to reply with.
-    const receiver = await User.findById(receiverId).select("isBot botProvider botModel");
+    const receiver = await User.findById(receiverId).select("isBot botProvider botModel rateLimitedUntil");
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
     }
