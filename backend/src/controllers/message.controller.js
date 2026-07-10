@@ -3,8 +3,7 @@ import { uploadImage } from "../../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
-import { ENV } from "../../lib/env.js";
-import { getBotReply } from "../../lib/gemini.js";
+import { getBotReply } from "../../lib/ai/index.js";
 
 const getPreviewText = (message, currentUserId) => {
   if (!message) return "";
@@ -88,8 +87,10 @@ export const sendMessage = async (req, res) => {
     if (senderId.equals(receiverId)) {
       return res.status(400).json({ message: "Cannot send messages to yourself." });
     }
-    const receiverExists = await User.exists({ _id: receiverId });
-    if (!receiverExists) {
+    // Fetch the receiver once — used for both the existence check and,
+    // if it's a bot, to know which provider/model to reply with.
+    const receiver = await User.findById(receiverId).select("isBot botProvider botModel");
+    if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
     }
 
@@ -144,10 +145,12 @@ export const sendMessage = async (req, res) => {
       io.to(receiverSocketId).emit("newMessage", newMessage)
     }
     res.status(201).json(newMessage);
-    if (receiverId === ENV.BOT_USER_ID && text) {
-      void getBotReply(text).then(async (replyText) => {
+
+    if (receiver.isBot && text) {
+      const bot = { provider: receiver.botProvider, model: receiver.botModel };
+      void getBotReply(bot, text).then(async (replyText) => {
         const botMessage = new Message({
-          senderId: ENV.BOT_USER_ID,
+          senderId: receiverId,
           receiverId: senderId,
           text: replyText,
         });
