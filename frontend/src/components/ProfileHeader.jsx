@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon, BotIcon, ChevronDownIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
@@ -7,11 +7,33 @@ const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile, isUpdatingProfile } = useAuthStore();
-  const { isSoundEnabled, toggleSound } = useChatStore();
+  const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser, rateLimitedBots } = useChatStore();
   const [selectedImg, setSelectedImg] = useState(null);
+  const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
 
   const fileInputRef = useRef(null);
+  const botMenuRef = useRef(null);
 
+  const bots = allContacts.filter((c) => c.isBot);
+
+  useEffect(() => {
+    getAllContacts();
+  }, [getAllContacts]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (botMenuRef.current && !botMenuRef.current.contains(e.target)) {
+        setIsBotMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectBot = (bot) => {
+    setSelectedUser(bot);
+    setIsBotMenuOpen(false);
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -76,6 +98,46 @@ function ProfileHeader() {
 
         {/* BUTTONS */}
         <div className="flex gap-4 items-center">
+          {/* AI ASSISTANT DROPDOWN — pick which bot to chat with */}
+          {bots.length > 0 && (
+            <div className="relative" ref={botMenuRef}>
+              <button
+                type="button"
+                className="text-slate-400 hover:text-blue-400 transition-colors flex items-center gap-0.5"
+                onClick={() => setIsBotMenuOpen((open) => !open)}
+                title="Chat with an AI Assistant"
+              >
+                <BotIcon className="size-5" />
+                <ChevronDownIcon className="size-3" />
+              </button>
+
+              {isBotMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg z-20 overflow-hidden">
+                  {bots.map((bot) => {
+                    const limitedUntil = rateLimitedBots[bot._id];
+                    const isLimited = limitedUntil && new Date(limitedUntil) > new Date();
+                    return (
+                      <button
+                        key={bot._id}
+                        type="button"
+                        onClick={() => selectBot(bot)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 transition-colors"
+                      >
+                        <div className="size-7 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                          <BotIcon className="size-4 text-white" />
+                        </div>
+                        <span className="flex-1 truncate">{bot.fullName}</span>
+                        {isLimited && (
+                          <span className="size-2 rounded-full bg-red-500 shrink-0" title="Message limit reached" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* LOGOUT BTN */}
           <button
             className="text-slate-400 hover:text-slate-200 transition-colors"
@@ -88,8 +150,7 @@ function ProfileHeader() {
           <button
             className="text-slate-400 hover:text-slate-200 transition-colors"
             onClick={() => {
-              // play click sound before toggling
-              mouseClickSound.currentTime = 0; // reset to start
+              mouseClickSound.currentTime = 0;
               mouseClickSound.play().catch((error) => console.log("Audio play failed:", error));
               toggleSound();
             }}

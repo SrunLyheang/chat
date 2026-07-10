@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, BotIcon } from "lucide-react";
 
 function ContactList() {
   const { getAllContacts, allContacts, setSelectedUser, isUserLoading } = useChatStore();
@@ -19,8 +19,15 @@ function ContactList() {
     (contact) => contact._id !== authUser._id
   );
 
-  const filteredContacts = contactsExcludingSelf.filter((contact) =>
-    contact.fullName.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  const botContacts = contactsExcludingSelf.filter((c) => c.isBot);
+  const humanContacts = contactsExcludingSelf.filter((c) => !c.isBot);
+
+  const search = searchTerm.trim().toLowerCase();
+  const filteredContacts = humanContacts.filter((contact) =>
+    contact.fullName.toLowerCase().includes(search)
+  );
+  const filteredBots = botContacts.filter((bot) =>
+    bot.fullName.toLowerCase().includes(search)
   );
 
   return (
@@ -36,7 +43,27 @@ function ContactList() {
         />
       </div>
 
-      {filteredContacts.length === 0 ? (
+      {filteredBots.map((bot) => (
+        <div
+          key={bot._id}
+          className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors mb-2 border border-cyan-500/20"
+          onClick={() => setSelectedUser(bot)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="avatar online">
+              <div className="size-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                <BotIcon className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h4 className="text-slate-200 font-medium">
+              {bot.fullName}
+              <span className="text-xs text-blue-400 ml-1">AI</span>
+            </h4>
+          </div>
+        </div>
+      ))}
+
+      {filteredContacts.length === 0 && filteredBots.length === 0 ? (
         <p className="text-slate-400 text-sm text-center mt-6">No contacts found</p>
       ) : (
         filteredContacts.map((contact) => (

@@ -3,7 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import NoChatsFound from "./NoChatsFound";
 import { useAuthStore } from "../store/useAuthStore";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, BotIcon } from "lucide-react";
 
 function ChatsList() {
   const {
@@ -56,9 +56,15 @@ function ChatsList() {
           >
             <div className="flex items-center gap-3">
               {/* This will be paired with socket */}
-              <div className={`avatar ${onlineUsers.includes(chat._id) ? "online" : ""}`}>
+              <div className={`avatar ${chat.isBot || onlineUsers.includes(chat._id) ? "online" : ""}`}>
                 <div className="size-12 rounded-full">
-                  <img src={chat.profilePic || "/avatar.png"} alt={chat.fullName} />
+                  {chat.isBot ? (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                      <BotIcon className="w-6 h-6 text-white" />
+                    </div>
+                  ) : (
+                    <img src={chat.profilePic || "/avatar.png"} alt={chat.fullName} />
+                  )}
                 </div>
               </div>
               <div className="min-w-0 flex-1">
