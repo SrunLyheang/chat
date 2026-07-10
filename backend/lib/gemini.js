@@ -29,7 +29,10 @@ export async function getBotReply(userMessage, attempt = 1) {
     });
     return response.text || "Sorry, I couldn't come up with a reply.";
   } catch (error) {
-    const isOverloaded = error.message?.includes("UNAVAILABLE") || error.message?.includes("503");
+    const errorMessage = error.message || "";
+    const isOverloaded = errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
+    // Add check for quota limits / rate limiting
+    const isRateLimited = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
 
     if (isOverloaded && attempt < 3) {
       console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
@@ -37,7 +40,13 @@ export async function getBotReply(userMessage, attempt = 1) {
       return getBotReply(userMessage, attempt + 1);
     }
 
-    console.log("Gemini error:", error.message);
+    console.log("Gemini error:", errorMessage);
+
+    // Return a specific message for rate limits
+    if (isRateLimited) {
+      return "I've hit my message limit for right now! Please try me again a little later.";
+    }
+
     return isOverloaded
       ? "I'm getting a lot of requests right now — try me again in a moment!"
       : "Sorry, I'm having trouble responding right now.";
