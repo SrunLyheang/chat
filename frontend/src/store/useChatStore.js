@@ -179,7 +179,9 @@ export const useChatStore = create((set, get) => ({
 
     // Immediately update the UI with the optimistic message
     set({ messages: sortMessages([...messages, optimisticMessage]), replyingTo: null });
-    if (selectedUser.isBot) set({ isBotThinking: true });
+    if (selectedUser.isBot && messageData.text) {
+      set({ isBotThinking: true });
+    }
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {

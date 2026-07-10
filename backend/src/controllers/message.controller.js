@@ -145,7 +145,7 @@ export const sendMessage = async (req, res) => {
     }
     res.status(201).json(newMessage);
     if (receiverId === ENV.BOT_USER_ID && text) {
-      getBotReply(text).then(async (replyText) => {
+      void getBotReply(text).then(async (replyText) => {
         const botMessage = new Message({
           senderId: ENV.BOT_USER_ID,
           receiverId: senderId,
@@ -157,6 +157,10 @@ export const sendMessage = async (req, res) => {
         if (userSocketId) {
           io.to(userSocketId).emit("newMessage", botMessage);
         }
+      }).catch((error) => {
+        console.error("Failed to generate bot reply:", error);
+        const userSocketId = getReceiverSocketId(senderId);
+        if (userSocketId) io.to(userSocketId).emit("botReplyFailed");
       });
     }
 

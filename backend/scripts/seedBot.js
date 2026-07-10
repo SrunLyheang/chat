@@ -4,7 +4,7 @@ import User from "../src/models/User.js";
 
 await connectDB();
 
-const existing = await User.findOne({ email: "bot@chatle.xyz" });
+const existing = await User.findOne({ email: "bot@yourapp.local" });
 if (existing) {
   console.log("Bot already exists. Its ID is:", existing._id.toString());
   process.exit(0);
