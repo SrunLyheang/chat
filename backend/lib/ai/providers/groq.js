@@ -13,40 +13,34 @@ export async function generateReply(model, userMessage, attempt = 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
-    try {
-      const res = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${ENV.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userMessage },
-          ],
-          max_tokens: 256,
-        }),
-        signal: controller.signal,
-      });
+    const res = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ENV.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
+        max_tokens: 256,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
 
-      if (!res.ok) {
-        const status = res.status;
-        const retryAfterHeader = res.headers.get("retry-after");
-        const body = await res.text().catch(() => "");
-        const error = new Error(`Groq ${status}: ${body}`);
-        error.status = status;
-        error.retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : null;
-        throw error;
-      }
-
-      const data = await res.json();
-    } finally {
-      clearTimeout(timeout);
+    if (!res.ok) {
+      const status = res.status;
+      const body = await res.text().catch(() => "");
+      const error = new Error(`Groq ${status}: ${body}`);
+      error.status = status;
+      throw error;
     }
-    const text = data.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't come up with a reply.";
-    return { text, rateLimited: false };
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't come up with a reply.";
   } catch (error) {
     const status = error.status;
     const isRateLimited = status === 429;
@@ -54,25 +48,18 @@ export async function generateReply(model, userMessage, attempt = 1) {
 
     if (isOverloaded && attempt < 3) {
       console.log(`Groq overloaded, retrying (attempt ${attempt + 1})...`);
-      await sleep(attempt * 1000);
+      await sleep(attempt * 1000); // wait 1s, then 2s
       return generateReply(model, userMessage, attempt + 1);
     }
 
     console.log("Groq error:", error.message || error);
 
     if (isRateLimited) {
-      return {
-        text: "Bot has hit message limit can not chat now",
-        rateLimited: true,
-        retryAfterSeconds: error.retryAfterSeconds || 60,
-      };
+      return "I've hit my message limit for right now! Please try me again a little later.";
     }
 
-    return {
-      text: isOverloaded
-        ? "I'm getting a lot of requests right now — try me again in a moment!"
-        : "Sorry, I'm having trouble responding right now.",
-      rateLimited: false,
-    };
+    return isOverloaded
+      ? "I'm getting a lot of requests right now — try me again in a moment!"
+      : "Sorry, I'm having trouble responding right now.";
   }
 }

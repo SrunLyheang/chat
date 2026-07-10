@@ -20,31 +20,26 @@ export async function generateReply(model, userMessage, attempt = 1) {
         httpOptions: { timeout: 15_000 },
       },
     });
-    return { text: response.text || "Sorry, I couldn't come up with a reply.", rateLimited: false };
+    return response.text || "Sorry, I couldn't come up with a reply.";
   } catch (error) {
     const errorMessage = error.message || "";
-    const status = Number(error?.status);
-    const isOverloaded =
-      status === 503 || errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
-    const isRateLimited =
-      status === 429 || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("429");
+    const isOverloaded = errorMessage.includes("UNAVAILABLE") || errorMessage.includes("503");
+    const isRateLimited = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
+
     if (isOverloaded && attempt < 3) {
       console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
-      await sleep(attempt * 1000);
+      await sleep(attempt * 1000); // wait 1s, then 2s
       return generateReply(model, userMessage, attempt + 1);
     }
 
     console.log("Gemini error:", errorMessage);
 
     if (isRateLimited) {
-      return { text: "Bot has hit message limit can not chat now", rateLimited: true, retryAfterSeconds: 60 };
+      return "I've hit my message limit for right now! Please try me again a little later.";
     }
 
-    return {
-      text: isOverloaded
-        ? "I'm getting a lot of requests right now — try me again in a moment!"
-        : "Sorry, I'm having trouble responding right now.",
-      rateLimited: false,
-    };
+    return isOverloaded
+      ? "I'm getting a lot of requests right now — try me again in a moment!"
+      : "Sorry, I'm having trouble responding right now.";
   }
 }
