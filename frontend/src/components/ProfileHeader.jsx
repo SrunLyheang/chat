@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon, BotIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
@@ -7,11 +7,23 @@ const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile, isUpdatingProfile } = useAuthStore();
-  const { isSoundEnabled, toggleSound } = useChatStore();
+  const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser } = useChatStore();
   const [selectedImg, setSelectedImg] = useState(null);
 
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    getAllContacts();
+  }, [getAllContacts]);
+
+  const openBotChat = () => {
+    const bot = allContacts.find((c) => c.isBot);
+    if (bot) {
+      setSelectedUser(bot);
+    } else {
+      getAllContacts(); // fallback, in case it hasn't loaded yet
+    }
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -76,6 +88,15 @@ function ProfileHeader() {
 
         {/* BUTTONS */}
         <div className="flex gap-4 items-center">
+          {/* AI ASSISTANT SHORTCUT */}
+          <button
+            className="text-slate-400 hover:text-blue-400 transition-colors"
+            onClick={openBotChat}
+            title="Chat with AI Assistant"
+          >
+            <BotIcon className="size-5" />
+          </button>
+
           {/* LOGOUT BTN */}
           <button
             className="text-slate-400 hover:text-slate-200 transition-colors"
@@ -88,8 +109,7 @@ function ProfileHeader() {
           <button
             className="text-slate-400 hover:text-slate-200 transition-colors"
             onClick={() => {
-              // play click sound before toggling
-              mouseClickSound.currentTime = 0; // reset to start
+              mouseClickSound.currentTime = 0;
               mouseClickSound.play().catch((error) => console.log("Audio play failed:", error));
               toggleSound();
             }}

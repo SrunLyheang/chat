@@ -35,6 +35,7 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false, // Fixed: Changed 'IsMessagesLoading' to 'isMessagesLoading'
   isSoundEnabled: localStorage.getItem('isSoundEnabled') === 'true',
   isTyping: false, // Fixed: Capitalized 'S' to match toggleSound
+  isBotThinking: false,
 
   toggleSound: () => {
     const nextSoundState = !get().isSoundEnabled;
@@ -178,6 +179,7 @@ export const useChatStore = create((set, get) => ({
 
     // Immediately update the UI with the optimistic message
     set({ messages: sortMessages([...messages, optimisticMessage]), replyingTo: null });
+    if (selectedUser.isBot) set({ isBotThinking: true });
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
@@ -194,7 +196,7 @@ export const useChatStore = create((set, get) => ({
 
       get().promoteChatForMessage(res.data, selectedUser, { shouldIncrementUnread: false });
     } catch (error) {
-      set({ messages: messages, replyingTo });
+      set({ messages: messages, replyingTo, isBotThinking: false });
       toast.error(error.response?.data?.message || "Something went wrong");
 
 
@@ -215,6 +217,9 @@ export const useChatStore = create((set, get) => ({
 
       if (isMessageSentFromSelectedUser) {
         set({ messages: sortMessages([...currentMessages, newMessage]) });
+      }
+      if (isMessageSentFromSelectedUser && get().selectedUser?.isBot) {
+        set({ isBotThinking: false });
       }
 
       const sender = get().chats.find((chat) => toUserId(chat._id) === messageSenderId) || get().allContacts.find((contact) => toUserId(contact._id) === messageSenderId);
@@ -293,7 +298,7 @@ export const useChatStore = create((set, get) => ({
     messagesSeenHandler = null;
     userTypingHandler = null;
     userStoppedTypingHandler = null;
-    set({ isTyping: false });
+    set({ isTyping: false, isBotThinking: false });
   },
 
   startTyping: () => {
