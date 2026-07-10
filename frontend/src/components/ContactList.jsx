@@ -19,14 +19,16 @@ function ContactList() {
     (contact) => contact._id !== authUser._id
   );
 
-  const botContact = contactsExcludingSelf.find((c) => c.isBot);
+  const botContacts = contactsExcludingSelf.filter((c) => c.isBot);
   const humanContacts = contactsExcludingSelf.filter((c) => !c.isBot);
 
   const search = searchTerm.trim().toLowerCase();
   const filteredContacts = humanContacts.filter((contact) =>
     contact.fullName.toLowerCase().includes(search)
   );
-  const showBot = botContact && botContact.fullName.toLowerCase().includes(search);
+  const filteredBots = botContacts.filter((bot) =>
+    bot.fullName.toLowerCase().includes(search)
+  );
 
   return (
     <>
@@ -41,10 +43,11 @@ function ContactList() {
         />
       </div>
 
-      {showBot && (
+      {filteredBots.map((bot) => (
         <div
+          key={bot._id}
           className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors mb-2 border border-cyan-500/20"
-          onClick={() => setSelectedUser(botContact)}
+          onClick={() => setSelectedUser(bot)}
         >
           <div className="flex items-center gap-3">
             <div className="avatar online">
@@ -53,14 +56,14 @@ function ContactList() {
               </div>
             </div>
             <h4 className="text-slate-200 font-medium">
-              {botContact.fullName}
+              {bot.fullName}
               <span className="text-xs text-blue-400 ml-1">AI</span>
             </h4>
           </div>
         </div>
-      )}
+      ))}
 
-      {filteredContacts.length === 0 && !showBot ? (
+      {filteredContacts.length === 0 && filteredBots.length === 0 ? (
         <p className="text-slate-400 text-sm text-center mt-6">No contacts found</p>
       ) : (
         filteredContacts.map((contact) => (

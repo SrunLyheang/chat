@@ -231,13 +231,12 @@ export const useChatStore = create((set, get) => ({
         sender || { _id: newMessage.senderId, fullName: "New message", profilePic: null },
         { shouldIncrementUnread: shouldNotify }
       );
+      // if (shouldNotify && get().isSoundEnabled) {
+      //   const notificationSound = new Audio("/sounds/notification.mp3");
 
-      if (shouldNotify && get().isSoundEnabled) {
-        const notificationSound = new Audio("/sounds/notification.mp3");
-
-        notificationSound.currentTime = 0; // reset to start
-        notificationSound.play().catch((e) => console.log("Audio play failed:", e));
-      }
+      //   notificationSound.currentTime = 0; // reset to start
+      //   notificationSound.play().catch((e) => console.log("Audio play failed:", e));
+      // }
     };
     socket.on("newMessage", newMessageHandler);
 
