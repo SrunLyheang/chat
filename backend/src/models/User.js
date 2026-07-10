@@ -15,6 +15,21 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        // Only relevant when isBot is true. Tells lib/ai/index.js which
+        // provider + model to call for this bot's replies.
+        botProvider: {
+            type: String,
+            enum: ["gemini", "groq"], // add new provider keys here as you register them in lib/ai/index.js
+            default: undefined,
+        },
+        botModel: {
+            type: String,
+            default: undefined,
+        },
+        rateLimitedUntil: {
+            type: Date,
+            default: null,
+        },
         password: {
             type: String,
             required: true,
