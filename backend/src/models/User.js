@@ -35,6 +35,19 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: ""
         },
+        // Per-viewer nicknames for other users, keyed by that user's id.
+        // Only the owner of this document sees these names.
+        nicknames: {
+            type: Map,
+            of: String,
+            default: {}
+        },
+        // Chats this user pinned to the top of their chat list (ids of the other user).
+        pinnedChats: {
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: "User",
+            default: []
+        },
         isEmailVerified: {
             type: Boolean,
             default: false

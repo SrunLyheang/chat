@@ -7,8 +7,8 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Every provider exports the same shape: generateReply(model, userMessage) -> string
-export async function generateReply(model, userMessage, attempt = 1) {
+// Every provider exports the same shape: generateReply(model, userMessage, history) -> string
+export async function generateReply(model, userMessage, history = [], attempt = 1) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
@@ -23,6 +23,10 @@ export async function generateReply(model, userMessage, attempt = 1) {
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          ...history.map((turn) => ({
+            role: turn.role === "user" ? "user" : "assistant",
+            content: turn.text,
+          })),
           { role: "user", content: userMessage },
         ],
         max_tokens: 256,
@@ -49,7 +53,7 @@ export async function generateReply(model, userMessage, attempt = 1) {
     if (isOverloaded && attempt < 3) {
       console.log(`Groq overloaded, retrying (attempt ${attempt + 1})...`);
       await sleep(attempt * 1000); // wait 1s, then 2s
-      return generateReply(model, userMessage, attempt + 1);
+      return generateReply(model, userMessage, history, attempt + 1);
     }
 
     console.log("Groq error:", error.message || error);
