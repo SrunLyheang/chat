@@ -23,12 +23,22 @@ const getPreviewText = (message, currentUserId) => {
     : text;
 };
 
+// Overlay the viewer's private per-contact data (nickname, pinned chat) onto a user object.
+const withViewerMeta = (userDoc, viewer) => {
+  const user = typeof userDoc.toObject === "function" ? userDoc.toObject() : { ...userDoc };
+  const userId = user._id.toString();
+  const nickname = viewer.nicknames?.get?.(userId);
+  if (nickname) user.nickname = nickname;
+  user.isPinnedChat = (viewer.pinnedChats || []).some((id) => id.toString() === userId);
+  return user;
+};
+
 export const getAllContacts = async (req, res) => {
 
   try {
     const loggedInUserId = req.user._id;
     const filteredUser = await User.find({ _id: { $ne: loggedInUserId } }).select("-password")
-    res.status(200).json(filteredUser);
+    res.status(200).json(filteredUser.map((user) => withViewerMeta(user, req.user)));
   } catch (error) {
     console.log("Error in getAllContacts: ", error);
     res.status(500).json({ message: "Server Error" })
@@ -148,7 +158,31 @@ export const sendMessage = async (req, res) => {
 
     if (receiver.isBot && text) {
       const bot = { provider: receiver.botProvider, model: receiver.botModel };
-      void getBotReply(bot, text).then(async (replyText) => {
+
+      // Pull recent turns from this conversation so the bot has memory.
+      // Capped at 10 messages (~5 back-and-forth exchanges) to keep prompts
+      // small — Groq's free tier charges tokens per request either way.
+      const recentMessages = await Message.find({
+        _id: { $ne: newMessage._id },
+        $or: [
+          { senderId, receiverId },
+          { senderId: receiverId, receiverId: senderId },
+        ],
+        isDeleted: { $ne: true },
+        text: { $exists: true, $ne: null },
+      })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select("senderId text");
+
+      const history = recentMessages
+        .reverse()
+        .map((m) => ({
+          role: m.senderId.toString() === senderId.toString() ? "user" : "assistant",
+          text: m.text,
+        }));
+
+      void getBotReply(bot, text, history).then(async (replyText) => {
         const botMessage = new Message({
           senderId: receiverId,
           receiverId: senderId,
@@ -228,6 +262,10 @@ export const deleteMessage = async (req, res) => {
     message.isDeleted = true;
     message.text = undefined;
     message.image = undefined;
+    // a deleted message has nothing left to show in the pinned bar
+    message.isPinned = false;
+    message.pinnedAt = undefined;
+    message.pinnedBy = undefined;
     await message.save();
 
     const replyMessages = await Message.find({
@@ -258,6 +296,108 @@ export const deleteMessage = async (req, res) => {
     });
   } catch (error) {
     console.log("Error in deleteMessage controller : ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const togglePinMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const myId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found." });
+    }
+    if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
+      return res.status(403).json({ message: "You can only pin messages in your own chats." });
+    }
+    if (message.isDeleted) {
+      return res.status(400).json({ message: "Cannot pin a deleted message." });
+    }
+
+    message.isPinned = !message.isPinned;
+    message.pinnedAt = message.isPinned ? new Date() : undefined;
+    message.pinnedBy = message.isPinned ? myId : undefined;
+    await message.save();
+
+    // let the other participant's open chat reflect the pin in real time
+    const otherUserId = message.senderId.equals(myId) ? message.receiverId : message.senderId;
+    const otherSocketId = getReceiverSocketId(otherUserId);
+    if (otherSocketId) {
+      io.to(otherSocketId).emit("messagePinned", message);
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.log("Error in togglePinMessage controller : ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const togglePinChat = async (req, res) => {
+  try {
+    const { id: contactId } = req.params;
+    const myId = req.user._id;
+
+    if (!mongoose.isValidObjectId(contactId)) {
+      return res.status(400).json({ message: "Invalid contact." });
+    }
+    if (myId.equals(contactId)) {
+      return res.status(400).json({ message: "Cannot pin a chat with yourself." });
+    }
+
+    const contact = await User.findById(contactId).select("_id");
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found." });
+    }
+
+    const isCurrentlyPinned = (req.user.pinnedChats || []).some((id) => id.toString() === contactId);
+    await User.updateOne(
+      { _id: myId },
+      isCurrentlyPinned
+        ? { $pull: { pinnedChats: contactId } }
+        : { $addToSet: { pinnedChats: contactId } }
+    );
+
+    res.status(200).json({ contactId, isPinnedChat: !isCurrentlyPinned });
+  } catch (error) {
+    console.log("Error in togglePinChat controller : ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const setNickname = async (req, res) => {
+  try {
+    const { id: contactId } = req.params;
+    const myId = req.user._id;
+    const nickname = typeof req.body.nickname === "string" ? req.body.nickname.trim() : "";
+
+    if (!mongoose.isValidObjectId(contactId)) {
+      return res.status(400).json({ message: "Invalid contact." });
+    }
+    if (myId.equals(contactId)) {
+      return res.status(400).json({ message: "Cannot set a nickname for yourself." });
+    }
+    if (nickname.length > 50) {
+      return res.status(400).json({ message: "Nickname must be 50 characters or less." });
+    }
+
+    const contact = await User.findById(contactId).select("_id");
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found." });
+    }
+
+    // $set/$unset directly so pre-existing users without a `nicknames` field work too
+    if (nickname) {
+      await User.updateOne({ _id: myId }, { $set: { [`nicknames.${contactId}`]: nickname } });
+    } else {
+      await User.updateOne({ _id: myId }, { $unset: { [`nicknames.${contactId}`]: "" } });
+    }
+
+    res.status(200).json({ contactId, nickname: nickname || null });
+  } catch (error) {
+    console.log("Error in setNickname controller : ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -298,7 +438,7 @@ export const getChatPartners = async (req, res) => {
         if (!partner || !lastMessage) return null;
 
         return {
-          ...partner.toObject(),
+          ...withViewerMeta(partner, req.user),
           lastMessage: {
             _id: lastMessage._id,
             text: lastMessage.text,

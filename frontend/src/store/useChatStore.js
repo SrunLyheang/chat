@@ -14,6 +14,7 @@ const sortMessages = (msgs) =>
 let newMessageHandler = null;
 let messageEditedHandler = null;
 let messageDeletedHandler = null;
+let messagePinnedHandler = null;
 let messagesSeenHandler = null;
 let userTypingHandler = null;
 let userStoppedTypingHandler = null;
@@ -36,6 +37,7 @@ export const useChatStore = create((set, get) => ({
   isSoundEnabled: localStorage.getItem('isSoundEnabled') === 'true',
   isTyping: false, // Fixed: Capitalized 'S' to match toggleSound
   isBotThinking: false,
+  highlightedMessageId: null,
 
   toggleSound: () => {
     const nextSoundState = !get().isSoundEnabled;
@@ -60,6 +62,7 @@ export const useChatStore = create((set, get) => ({
   }),
   setReplyingTo: (message) => set({ replyingTo: message }),
   clearReplyingTo: () => set({ replyingTo: null }),
+  setHighlightedMessageId: (messageId) => set({ highlightedMessageId: messageId }),
   toggleIncomingMessagePreview: () => {
     const nextValue = !get().showIncomingMessagePreview;
     localStorage.setItem("showIncomingMessagePreview", String(nextValue));
@@ -261,6 +264,15 @@ export const useChatStore = create((set, get) => ({
     };
     socket.on("messageDeleted", messageDeletedHandler);
 
+    messagePinnedHandler = (updatedMessage) => {
+      set({
+        messages: get().messages.map((msg) =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        ),
+      });
+    };
+    socket.on("messagePinned", messagePinnedHandler);
+
     messagesSeenHandler = ({ seenBy }) => {
       const { authUser } = useAuthStore.getState();
       const currentMessages = get().messages;
@@ -290,12 +302,14 @@ export const useChatStore = create((set, get) => ({
     if (newMessageHandler) socket.off("newMessage", newMessageHandler);
     if (messageEditedHandler) socket.off("messageEdited", messageEditedHandler);
     if (messageDeletedHandler) socket.off("messageDeleted", messageDeletedHandler);
+    if (messagePinnedHandler) socket.off("messagePinned", messagePinnedHandler);
     if (messagesSeenHandler) socket.off("messagesSeen", messagesSeenHandler);
     if (userTypingHandler) socket.off("userTyping", userTypingHandler);
     if (userStoppedTypingHandler) socket.off("userStoppedTyping", userStoppedTypingHandler);
     newMessageHandler = null;
     messageEditedHandler = null;
     messageDeletedHandler = null;
+    messagePinnedHandler = null;
     messagesSeenHandler = null;
     userTypingHandler = null;
     userStoppedTypingHandler = null;
@@ -332,6 +346,51 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       set({ messages: previousMessages });
       toast.error(error.response?.data?.message || "Failed to edit message");
+    }
+  },
+
+  togglePinMessage: async (messageId) => {
+    try {
+      const res = await axiosInstance.put(`/messages/${messageId}/pin`);
+      set({
+        messages: get().messages.map((msg) => (msg._id === res.data._id ? res.data : msg)),
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to pin message");
+    }
+  },
+
+  togglePinChat: async (contactId) => {
+    try {
+      const res = await axiosInstance.put(`/messages/contacts/${contactId}/pin`);
+      const { isPinnedChat } = res.data;
+      const applyPin = (user) =>
+        toUserId(user._id) === toUserId(contactId) ? { ...user, isPinnedChat } : user;
+
+      set((state) => ({
+        allContacts: state.allContacts.map(applyPin),
+        chats: state.chats.map(applyPin),
+        selectedUser: state.selectedUser ? applyPin(state.selectedUser) : state.selectedUser,
+      }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to pin chat");
+    }
+  },
+
+  setNickname: async (contactId, nickname) => {
+    try {
+      const res = await axiosInstance.put(`/messages/contacts/${contactId}/nickname`, { nickname });
+      const savedNickname = res.data.nickname || undefined;
+      const applyNickname = (user) =>
+        toUserId(user._id) === toUserId(contactId) ? { ...user, nickname: savedNickname } : user;
+
+      set((state) => ({
+        allContacts: state.allContacts.map(applyNickname),
+        chats: state.chats.map(applyNickname),
+        selectedUser: state.selectedUser ? applyNickname(state.selectedUser) : state.selectedUser,
+      }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to set nickname");
     }
   },
 
