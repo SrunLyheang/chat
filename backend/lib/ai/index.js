@@ -21,7 +21,9 @@ export async function getBotReply(bot, userMessage) {
 
   if (!provider) {
     console.log(`Unknown AI provider "${bot.provider}" — check the bot's provider field.`);
+
     return "Sorry, I'm having trouble responding right now.";
+
   }
 
   return provider.generateReply(bot.model, userMessage);
