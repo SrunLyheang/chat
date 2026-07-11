@@ -1,6 +1,7 @@
 // Khmer (ភាសាខ្មែរ) dictionary — mirrors every key in en.js.
 const km = {
-  "app.name": "ចាតលេ",
+  // Brand name stays in English in every language.
+  "app.name": "Chatle",
 
   // Auth
   "auth.welcomeBack": "សូមស្វាគមន៍ត្រឡប់មកវិញ",
