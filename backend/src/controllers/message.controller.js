@@ -37,7 +37,11 @@ export const getAllContacts = async (req, res) => {
 
   try {
     const loggedInUserId = req.user._id;
-    const filteredUser = await User.find({ _id: { $ne: loggedInUserId } }).select("-password")
+    // Hide anyone this user has blocked from their contact directory.
+    const blockedIds = req.user.blockedUsers || [];
+    const filteredUser = await User.find({
+      _id: { $ne: loggedInUserId, $nin: blockedIds },
+    }).select("-password")
     res.status(200).json(filteredUser.map((user) => withViewerMeta(user, req.user)));
   } catch (error) {
     console.log("Error in getAllContacts: ", error);
@@ -50,6 +54,16 @@ export const getMessagesByUserId = async (req, res) => {
   try {
     const myId = req.user._id
     const { id: userToChatId } = req.params
+
+    // If the viewer has blocked this user, hide the conversation from the
+    // viewer only. We check the viewer's OWN blockedUsers list — never the
+    // other user's — so a block never hides the blocked person's own history.
+    const blockedByMe = (req.user.blockedUsers || []).some(
+      (id) => id.toString() === userToChatId
+    );
+    if (blockedByMe) {
+      return res.status(200).json([]);
+    }
 
     const messages = await Message.find({
       $or: [
@@ -97,12 +111,30 @@ export const sendMessage = async (req, res) => {
     if (senderId.equals(receiverId)) {
       return res.status(400).json({ message: "Cannot send messages to yourself." });
     }
-    // Fetch the receiver once — used for both the existence check and,
-    // if it's a bot, to know which provider/model to reply with.
-    const receiver = await User.findById(receiverId).select("isBot botProvider botModel");
+
+    // Don't let a user message someone they've blocked.
+    const iBlockedReceiver = (req.user.blockedUsers || []).some(
+      (id) => id.toString() === receiverId
+    );
+    if (iBlockedReceiver) {
+      return res.status(403).json({ message: "You have blocked this user. Unblock them to send messages." });
+    }
+
+    // Fetch the receiver once — used for the existence check, to know which
+    // provider/model to reply with if it's a bot, and to see whether the
+    // receiver has blocked the sender (blockedUsers must be selected or the
+    // check below silently no-ops).
+    const receiver = await User.findById(receiverId).select("isBot botProvider botModel blockedUsers");
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
     }
+
+    // If the receiver has blocked the sender, we still save the message so the
+    // sender's own view is unaffected (no error, message appears in their
+    // thread), but we skip realtime delivery so the blocker never sees it.
+    const receiverBlockedSender = (receiver.blockedUsers || []).some(
+      (id) => id.toString() === senderId.toString()
+    );
 
     let replySnapshot;
     if (replyTo) {
@@ -150,13 +182,18 @@ export const sendMessage = async (req, res) => {
       replyTo: replySnapshot,
     });
     await newMessage.save();
-    const receiverSocketId = getReceiverSocketId(receiverId)
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage)
+    // Skip realtime delivery if the receiver has blocked the sender — the
+    // message is saved but the blocker never gets pinged (and won't see it on
+    // next fetch, since getMessagesByUserId returns [] for blocked partners).
+    if (!receiverBlockedSender) {
+      const receiverSocketId = getReceiverSocketId(receiverId)
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("newMessage", newMessage)
+      }
     }
     res.status(201).json(newMessage);
 
-    if (receiver.isBot && text) {
+    if (receiver.isBot && text && !receiverBlockedSender) {
       const bot = { provider: receiver.botProvider, model: receiver.botModel };
 
       // Pull recent turns from this conversation so the bot has memory.
@@ -406,6 +443,8 @@ export const getChatPartners = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
     const loggedInUserIdStr = loggedInUserId.toString();
+    // Partners the viewer has blocked should not appear in their chat list.
+    const blockedIdSet = new Set((req.user.blockedUsers || []).map((id) => id.toString()));
 
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
@@ -419,6 +458,7 @@ export const getChatPartners = async (req, res) => {
         : msg.senderId.toString();
 
       if (partnerId === loggedInUserIdStr) return;
+      if (blockedIdSet.has(partnerId)) return;
 
       const currentLatest = latestMessagesByPartner.get(partnerId);
       if (!currentLatest || new Date(msg.createdAt) > new Date(currentLatest.createdAt)) {

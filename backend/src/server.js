@@ -5,6 +5,7 @@ import { ENV } from "../lib/env.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import userRoutes from "./routes/user.route.js";
 import { connectDB } from "../lib/db.js";
 import cors from "cors"
 import { app, server } from "../lib/socket.js";
@@ -24,6 +25,7 @@ app.use(cookieParser())
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/stream", streamRoutes);
 
 // Make ready for deployment
