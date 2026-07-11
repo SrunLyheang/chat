@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect } from "react";
-import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon, BotIcon, ChevronDownIcon, ShieldBanIcon } from "lucide-react";
+import {
+  LoaderIcon,
+  LogOutIcon,
+  VolumeOffIcon,
+  Volume2Icon,
+  BotIcon,
+  ChevronDownIcon,
+  ShieldBanIcon,
+  PaletteIcon,
+  CheckIcon,
+} from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { useThemeStore, THEMES } from "../store/useThemeStore";
+import { useI18nStore, LANGS } from "../store/useI18nStore";
 import BlockedUsersModal from "./BlockedUsersModal";
 
 const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
@@ -9,12 +21,16 @@ const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 function ProfileHeader() {
   const { logout, authUser, updateProfile, isUpdatingProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser } = useChatStore();
+  const { theme, setTheme } = useThemeStore();
+  const { t, lang, setLang } = useI18nStore();
   const [selectedImg, setSelectedImg] = useState(null);
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const botMenuRef = useRef(null);
+  const themeMenuRef = useRef(null);
 
   const bots = allContacts.filter((c) => c.isBot);
 
@@ -27,6 +43,9 @@ function ProfileHeader() {
       if (botMenuRef.current && !botMenuRef.current.contains(e.target)) {
         setIsBotMenuOpen(false);
       }
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
+        setIsThemeMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -36,6 +55,15 @@ function ProfileHeader() {
     setSelectedUser(bot);
     setIsBotMenuOpen(false);
   };
+
+  // With two languages a single button cycles; more languages later can turn
+  // this into a menu like the theme picker.
+  const toggleLang = () => {
+    const currentIndex = LANGS.findIndex((l) => l.id === lang);
+    const next = LANGS[(currentIndex + 1) % LANGS.length];
+    setLang(next.id);
+  };
+  const currentLangLabel = LANGS.find((l) => l.id === lang)?.label || lang;
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -52,7 +80,7 @@ function ProfileHeader() {
   };
 
   return (
-    <div className="p-6 border-b border-slate-700/50">
+    <div className="p-6 border-b border-edge/50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* AVATAR */}
@@ -73,7 +101,7 @@ function ProfileHeader() {
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <span className="text-white text-xs">Change</span>
+                  <span className="text-white text-xs">{t("profile.change")}</span>
                 </div>
               )}
             </button>
@@ -90,40 +118,87 @@ function ProfileHeader() {
 
           {/* USERNAME & ONLINE TEXT */}
           <div>
-            <h3 className="text-slate-200 font-medium text-base max-w-[180px] truncate">
+            <h3 className="text-content font-medium text-base max-w-[180px] truncate">
               {authUser.fullName}
             </h3>
 
-            <p className="text-slate-400 text-xs">Online</p>
+            <p className="text-muted text-xs">{t("profile.online")}</p>
           </div>
         </div>
 
         {/* BUTTONS */}
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-3 items-center">
+          {/* THEME PICKER */}
+          <div className="relative" ref={themeMenuRef}>
+            <button
+              type="button"
+              className="text-muted hover:text-primary transition-colors"
+              onClick={() => setIsThemeMenuOpen((open) => !open)}
+              title={t("profile.theme")}
+            >
+              <PaletteIcon className="size-5" />
+            </button>
+
+            {isThemeMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-edge/50 bg-ground shadow-lg z-20 overflow-hidden">
+                {THEMES.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      setTheme(option.id);
+                      setIsThemeMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-content hover:bg-surface transition-colors"
+                  >
+                    <span
+                      className="size-4 shrink-0 rounded-full border border-edge"
+                      style={{
+                        background: `linear-gradient(135deg, ${option.swatch[0]} 45%, ${option.swatch[1]} 45%)`,
+                      }}
+                    />
+                    <span className="flex-1 truncate">{t(option.labelKey)}</span>
+                    {theme === option.id && <CheckIcon className="size-4 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* LANGUAGE TOGGLE */}
+          <button
+            type="button"
+            onClick={toggleLang}
+            title={t("profile.language")}
+            className="rounded-md border border-edge/60 px-1.5 py-0.5 text-xs font-semibold text-muted hover:text-primary hover:border-primary/50 transition-colors"
+          >
+            {currentLangLabel}
+          </button>
+
           {/* AI ASSISTANT DROPDOWN — pick which bot to chat with */}
           {bots.length > 0 && (
             <div className="relative" ref={botMenuRef}>
               <button
                 type="button"
-                className="text-slate-400 hover:text-blue-400 transition-colors flex items-center gap-0.5"
+                className="text-muted hover:text-primary transition-colors flex items-center gap-0.5"
                 onClick={() => setIsBotMenuOpen((open) => !open)}
-                title="Chat with an AI Assistant"
+                title={t("profile.aiAssistant")}
               >
                 <BotIcon className="size-5" />
                 <ChevronDownIcon className="size-3" />
               </button>
 
               {isBotMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg z-20 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-edge/50 bg-ground shadow-lg z-20 overflow-hidden">
                   {bots.map((bot) => (
                     <button
                       key={bot._id}
                       type="button"
                       onClick={() => selectBot(bot)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-content hover:bg-surface transition-colors"
                     >
-                      <div className="size-7 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                        <BotIcon className="size-4 text-white" />
+                      <div className="size-7 shrink-0 rounded-full bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center">
+                        <BotIcon className="size-4 text-onPrimary" />
                       </div>
                       <span className="flex-1 truncate">{bot.fullName}</span>
                     </button>
@@ -135,24 +210,26 @@ function ProfileHeader() {
 
           {/* BLOCKED USERS BTN */}
           <button
-            className="text-slate-400 hover:text-slate-200 transition-colors"
+            className="text-muted hover:text-content transition-colors"
             onClick={() => setIsBlockedModalOpen(true)}
-            title="Blocked users"
+            title={t("profile.blockedUsers")}
           >
             <ShieldBanIcon className="size-5" />
           </button>
 
           {/* LOGOUT BTN */}
           <button
-            className="text-slate-400 hover:text-slate-200 transition-colors"
+            className="text-muted hover:text-content transition-colors"
             onClick={logout}
+            title={t("profile.logout")}
           >
             <LogOutIcon className="size-5" />
           </button>
 
           {/* SOUND TOGGLE BTN */}
           <button
-            className="text-slate-400 hover:text-slate-200 transition-colors"
+            className="text-muted hover:text-content transition-colors"
+            title={t("profile.sound")}
             onClick={() => {
               mouseClickSound.currentTime = 0;
               mouseClickSound.play().catch((error) => console.log("Audio play failed:", error));

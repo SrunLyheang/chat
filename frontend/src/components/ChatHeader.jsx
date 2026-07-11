@@ -16,6 +16,7 @@ import {
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useI18nStore } from "../store/useI18nStore";
 import { useCallStore } from "../store/useCallStore";
 import toast from "react-hot-toast";
 import GroupInfoModal from "./GroupInfoModal";
@@ -24,6 +25,7 @@ function ChatHeader() {
   const { selectedUser, setSelectedUser, isTyping, isBotThinking, setNickname, togglePinChat, toggleBlockUser } =
     useChatStore();
   const { onlineUsers } = useAuthStore();
+  const { t } = useI18nStore();
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -91,7 +93,7 @@ function ChatHeader() {
 
   return (
     <div
-      className="flex justify-between items-center bg-slate-800/50 border-b border-slate-700/50 max-h-[64px] px-4 py-2 flex-1"
+      className="flex justify-between items-center bg-surface/50 border-b border-edge/50 max-h-[64px] px-4 py-2 flex-1"
     >
       {/* Left Side */}
       <div className="flex items-center space-x-3 min-w-0">
@@ -101,12 +103,12 @@ function ChatHeader() {
         >
           <div className="w-10 rounded-full">
             {isGroup ? (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
-                <UsersIcon className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                <UsersIcon className="w-5 h-5 text-onPrimary" />
               </div>
             ) : selectedUser.isBot ? (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                <BotIcon className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center">
+                <BotIcon className="w-5 h-5 text-onPrimary" />
               </div>
             ) : (
               <img
@@ -122,11 +124,11 @@ function ChatHeader() {
             type="button"
             onClick={() => setIsGroupInfoOpen(true)}
             className="min-w-0 text-left"
-            title="Group info"
+            title={t("chat.groupInfo")}
           >
-            <h3 className="truncate text-sm text-slate-200 font-medium">{selectedUser.fullName}</h3>
-            <p className="text-slate-400 text-xs truncate">
-              {memberCount} {memberCount === 1 ? "member" : "members"}
+            <h3 className="truncate text-sm text-content font-medium">{selectedUser.fullName}</h3>
+            <p className="text-muted text-xs truncate">
+              {t(memberCount === 1 ? "chat.member" : "chat.members", { count: memberCount })}
             </p>
           </button>
         ) : (
@@ -143,62 +145,62 @@ function ChatHeader() {
                 }}
                 maxLength={50}
                 placeholder={selectedUser.fullName}
-                className="w-40 rounded-md border border-slate-600 bg-slate-900/60 px-2 py-1 text-sm text-slate-200 placeholder:text-slate-500 focus:border-cyan-500/60 focus:outline-none"
+                className="w-40 rounded-md border border-edge bg-ground/60 px-2 py-1 text-sm text-content placeholder:text-muted focus:border-primary/60 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={saveNickname}
-                title="Save nickname"
-                className="text-cyan-400 hover:text-cyan-300"
+                title={t("chat.saveNickname")}
+                className="text-primary hover:text-primary"
               >
                 <CheckIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditingNickname(false)}
-                title="Cancel"
-                className="text-slate-400 hover:text-slate-200"
+                title={t("common.cancel")}
+                className="text-muted hover:text-content"
               >
                 <XIcon className="h-4 w-4" />
               </button>
             </div>
           ) : (
             <div className="group/name flex items-center gap-1.5 min-w-0">
-              <h3 className="truncate text-sm text-slate-200 font-medium">{displayName}</h3>
+              <h3 className="truncate text-sm text-content font-medium">{displayName}</h3>
               <button
                 type="button"
                 onClick={startNicknameEdit}
-                title={hasNickname ? "Edit nickname" : "Set nickname"}
-                className="shrink-0 text-slate-500 opacity-0 transition-opacity hover:text-slate-300 group-hover/name:opacity-100"
+                title={hasNickname ? t("chat.editNickname") : t("chat.setNickname")}
+                className="shrink-0 text-muted opacity-0 transition-opacity hover:text-content group-hover/name:opacity-100"
               >
                 <PencilIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
 
-          <p className="text-slate-400 text-xs truncate">
+          <p className="text-muted text-xs truncate">
             {hasNickname && !isEditingNickname && (
-              <span className="mr-1.5 text-slate-500">{selectedUser.fullName} ·</span>
+              <span className="mr-1.5 text-muted">{selectedUser.fullName} ·</span>
             )}
             {selectedUser.isBot ? (
               isBotThinking ? (
-                <span className="text-blue-400 inline-flex items-center gap-1">
-                  AI is thinking
+                <span className="text-primary inline-flex items-center gap-1">
+                  {t("chat.aiThinking")}
                   <span className="inline-flex gap-0.5">
-                    <span className="w-1 h-1 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1 h-1 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1 h-1 rounded-full bg-blue-400 animate-bounce" />
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce" />
                   </span>
                 </span>
               ) : (
-                <span className="text-blue-400 font-medium">AI</span>
+                <span className="text-primary font-medium">{t("chat.ai")}</span>
               )
             ) : isTyping ? (
-              <span className="text-cyan-400">typing...</span>
+              <span className="text-primary">{t("chat.typing")}</span>
             ) : isOnline ? (
-              "Online"
+              t("chat.online")
             ) : (
-              "Offline"
+              t("chat.offline")
             )}
           </p>
         </div>
@@ -211,10 +213,10 @@ function ChatHeader() {
           <button
             type="button"
             onClick={() => setIsGroupInfoOpen(true)}
-            title="Group info"
-            className="rounded-full p-2 transition hover:bg-slate-700/70"
+            title={t("chat.groupInfo")}
+            className="rounded-full p-2 transition hover:bg-surface2/70"
           >
-            <UsersIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+            <UsersIcon className="h-5 w-5 text-muted hover:text-content" />
           </button>
         )}
 
@@ -222,13 +224,13 @@ function ChatHeader() {
         <button
           type="button"
           onClick={() => togglePinChat(selectedUser._id)}
-          title={selectedUser.isPinnedChat ? "Unpin chat" : "Pin chat"}
-          className="rounded-full p-2 transition hover:bg-slate-700/70"
+          title={selectedUser.isPinnedChat ? t("chat.unpinChat") : t("chat.pinChat")}
+          className="rounded-full p-2 transition hover:bg-surface2/70"
         >
           {selectedUser.isPinnedChat ? (
-            <PinOffIcon className="h-5 w-5 text-cyan-400 hover:text-cyan-300" />
+            <PinOffIcon className="h-5 w-5 text-primary hover:text-primary" />
           ) : (
-            <PinIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+            <PinIcon className="h-5 w-5 text-muted hover:text-content" />
           )}
         </button>
         )}
@@ -238,21 +240,21 @@ function ChatHeader() {
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              title="More options"
-              className="rounded-full p-2 transition hover:bg-slate-700/70"
+              title={t("chat.moreOptions")}
+              className="rounded-full p-2 transition hover:bg-surface2/70"
             >
-              <MoreVerticalIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+              <MoreVerticalIcon className="h-5 w-5 text-muted hover:text-content" />
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg">
+              <div className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-lg border border-edge/50 bg-ground shadow-lg">
                 <button
                   type="button"
                   onClick={handleBlockUser}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-400 transition-colors hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-400 transition-colors hover:bg-surface"
                 >
                   <BanIcon className="h-4 w-4" />
-                  Block user
+                  {t("chat.blockUser")}
                 </button>
               </div>
             )}
@@ -269,27 +271,27 @@ function ChatHeader() {
               }
 
               if (!isOnline) {
-                toast.error("User is offline, cannot call");
+                toast.error(t("chat.userOffline"));
                 return;
               }
 
               startCall(selectedUser);
             }}
             disabled={isCallActionPending}
-            className={`rounded-full p-2 transition hover:bg-slate-700/70 disabled:cursor-not-allowed disabled:opacity-70 ${!isOnline && !activeCall
+            className={`rounded-full p-2 transition hover:bg-surface2/70 disabled:cursor-not-allowed disabled:opacity-70 ${!isOnline && !activeCall
               ? "opacity-40 cursor-not-allowed"
               : ""
               }`}
           >
             {isCallActionPending && callStatus === "connecting" ? (
-              <LoaderCircleIcon className="h-5 w-5 animate-spin text-cyan-400" />
+              <LoaderCircleIcon className="h-5 w-5 animate-spin text-primary" />
             ) : activeCall ? (
               <PhoneOffIcon className="h-5 w-5 text-rose-400 hover:text-rose-300" />
             ) : (
               <PhoneIcon
                 className={`h-5 w-5 ${isOnline
-                  ? "text-slate-400 hover:text-slate-200"
-                  : "text-slate-600"
+                  ? "text-muted hover:text-content"
+                  : "text-muted"
                   }`}
               />
             )}
@@ -301,7 +303,7 @@ function ChatHeader() {
           onClick={() => setSelectedUser(null)}
           className="md:hidden"
         >
-          <ArrowLeftIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors" />
+          <ArrowLeftIcon className="w-5 h-5 text-muted hover:text-content transition-colors" />
         </button>
 
         {/* Desktop */}
@@ -309,7 +311,7 @@ function ChatHeader() {
           onClick={() => setSelectedUser(null)}
           className="hidden md:block"
         >
-          <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors" />
+          <XIcon className="w-5 h-5 text-muted hover:text-content transition-colors" />
         </button>
       </div>
 

@@ -3,6 +3,7 @@ import { ImageIcon, SendIcon, X as XIcon } from 'lucide-react';
 import useKeyboardSound from '../../../backend/src/hooks/useKeyboardSound';
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useI18nStore } from "../store/useI18nStore";
 import { toast } from 'react-hot-toast';
 
 const TYPING_TIMEOUT = 1500;
@@ -25,13 +26,14 @@ function MessageInput() {
     selectedUser,
   } = useChatStore();
   const { authUser } = useAuthStore();
+  const { t } = useI18nStore();
 
   const replySenderName = replyingTo?.senderId === authUser?._id
-    ? "You"
+    ? t("chat.you")
     : selectedUser?.nickname?.trim() || selectedUser?.fullName;
   const replyText = replyingTo?.isDeleted
-    ? "Deleted message"
-    : replyingTo?.text || (replyingTo?.image ? "Photo" : "Message");
+    ? t("chat.deletedMessage")
+    : replyingTo?.text || (replyingTo?.image ? t("chat.photo") : t("chat.message"));
 
   const handleTextChange = (e) => {
     setText(e.target.value);
@@ -67,7 +69,7 @@ function MessageInput() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+      toast.error(t("chat.selectImage"));
       return;
     }
 
@@ -94,14 +96,14 @@ function MessageInput() {
   }, [replyingTo]);
 
   return (
-    <div className="p-3 border-t border-slate-700/50">
+    <div className="p-3 border-t border-edge/50">
       {replyingTo && (
-        <div className="max-w-3xl mx-auto mb-3 flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2">
-          <div className="min-w-0 flex-1 border-l-4 border-slate-500 pl-3">
-            <p className="text-xs font-semibold text-slate-200">
-              Replying to {replySenderName}
+        <div className="max-w-3xl mx-auto mb-3 flex items-center gap-3 rounded-lg border border-edge bg-surface/80 px-3 py-2">
+          <div className="min-w-0 flex-1 border-l-4 border-muted pl-3">
+            <p className="text-xs font-semibold text-content">
+              {t("chat.replyingTo", { name: replySenderName })}
             </p>
-            <p className="truncate text-sm text-slate-400">
+            <p className="truncate text-sm text-muted">
               {replyText}
             </p>
           </div>
@@ -115,7 +117,7 @@ function MessageInput() {
           <button
             type="button"
             onClick={clearReplyingTo}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface2 hover:text-content"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -128,11 +130,11 @@ function MessageInput() {
             <img
               src={imagePreview}
               alt="Preview"
-              className="w-20 h-20 object-cover rounded-lg border border-slate-700"
+              className="w-20 h-20 object-cover rounded-lg border border-edge"
             />
             <button
               onClick={removeImage}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-200 hover:bg-slate-700"
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-surface flex items-center justify-center text-content hover:bg-surface2"
               type="button"
             >
               <XIcon className="w-4 h-4" />
@@ -145,7 +147,7 @@ function MessageInput() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-slate-800/80 ${imagePreview ? "text-cyan-400" : "text-slate-400 hover:text-slate-200"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface/80 ${imagePreview ? "text-primary" : "text-muted hover:text-content"
             }`}
         >
           <ImageIcon className="w-5 h-5" />
@@ -155,8 +157,8 @@ function MessageInput() {
           type="text"
           value={text}
           onChange={handleTextChange}
-          className="flex-1 rounded-full border border-slate-700/50 bg-slate-800/60 px-4 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none"
-          placeholder="Type your message..."
+          className="flex-1 rounded-full border border-edge/50 bg-surface/60 px-4 py-2 text-sm text-content placeholder:text-muted focus:border-primary/50 focus:outline-none"
+          placeholder={t("chat.typeMessage")}
         />
         <input
           type="file"
@@ -168,7 +170,7 @@ function MessageInput() {
         <button
           type="submit"
           disabled={!text.trim() && !imagePreview}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white transition-all hover:from-cyan-600 hover:to-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary to-primaryStrong text-onPrimary transition-all hover:from-primaryStrong hover:to-primaryStrong disabled:cursor-not-allowed disabled:opacity-40"
         >
           <SendIcon className="w-5 h-5" />
         </button>

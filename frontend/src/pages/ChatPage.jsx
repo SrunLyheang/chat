@@ -21,7 +21,7 @@ function ChatPage() {
       <BorderAnimatedContainer>
         {/* left: full width on mobile when nothing is selected, fixed width from md up */}
         <div
-          className={`w-full md:w-72 lg:w-80 bg-slate-800/50 backdrop-blur-sm flex-col ${selectedUser ? "hidden md:flex" : "flex"
+          className={`w-full md:w-72 lg:w-80 bg-surface/50 backdrop-blur-sm flex-col ${selectedUser ? "hidden md:flex" : "flex"
             }`}
         >
           <ProfileHeader />
@@ -34,7 +34,7 @@ function ChatPage() {
 
         {/* right side: full width on mobile once a chat is open */}
         <div
-          className={`w-full md:flex-1 flex-col bg-slate-900/50 backdrop-blur-sm ${selectedUser ? "flex" : "hidden md:flex"
+          className={`w-full md:flex-1 flex-col bg-ground/50 backdrop-blur-sm ${selectedUser ? "flex" : "hidden md:flex"
             }`}
         >
           {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}

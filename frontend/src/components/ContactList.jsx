@@ -3,6 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { useFriendStore } from "../store/useFriendStore";
+import { useI18nStore } from "../store/useI18nStore";
 import { SearchIcon, BotIcon, UserPlusIcon, CheckIcon, ClockIcon } from "lucide-react";
 
 function ContactList() {
@@ -10,6 +11,7 @@ function ContactList() {
   const { onlineUsers, authUser } = useAuthStore();
   const { relationshipTo, sendRequest, acceptRequest, loadFriendData } = useFriendStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const { t } = useI18nStore();
 
   useEffect(() => {
     getAllContacts();
@@ -28,14 +30,14 @@ function ContactList() {
 
     if (relationship === "friends") {
       return (
-        <span className="flex shrink-0 items-center gap-1 text-xs text-cyan-400" title="Friends">
+        <span className="flex shrink-0 items-center gap-1 text-xs text-primary" title={t("contacts.friends")}>
           <CheckIcon className="h-4 w-4" />
         </span>
       );
     }
     if (relationship === "sent") {
       return (
-        <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500" title="Request pending">
+        <span className="flex shrink-0 items-center gap-1 text-xs text-muted" title={t("contacts.requestPending")}>
           <ClockIcon className="h-4 w-4" />
         </span>
       );
@@ -45,10 +47,10 @@ function ContactList() {
         <button
           type="button"
           onClick={stop(() => acceptRequest(contact))}
-          title="Accept friend request"
-          className="shrink-0 rounded-lg bg-cyan-500/20 px-2.5 py-1 text-xs text-cyan-400 transition hover:bg-cyan-500/30"
+          title={t("contacts.acceptRequest")}
+          className="shrink-0 rounded-lg bg-primary/20 px-2.5 py-1 text-xs text-primary transition hover:bg-primary/30"
         >
-          Accept
+          {t("contacts.accept")}
         </button>
       );
     }
@@ -56,8 +58,8 @@ function ContactList() {
       <button
         type="button"
         onClick={stop(() => sendRequest(contact))}
-        title="Add friend"
-        className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-cyan-400"
+        title={t("contacts.addFriend")}
+        className="shrink-0 rounded-full p-1.5 text-muted transition hover:bg-surface2 hover:text-primary"
       >
         <UserPlusIcon className="h-4 w-4" />
       </button>
@@ -83,13 +85,13 @@ function ContactList() {
   return (
     <>
       <div className="relative mb-3">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search contacts..."
-          className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+          placeholder={t("contacts.search")}
+          className="w-full bg-surface/50 border border-edge/50 rounded-lg py-2 pl-9 pr-3 text-sm text-content placeholder:text-muted focus:outline-none focus:border-primary/50"
         />
       </div>
 
@@ -97,34 +99,34 @@ function ContactList() {
         <div
           key={bot._id}
           className={`p-4 rounded-lg cursor-pointer transition-colors mb-2 border ${selectedUser?._id === bot._id
-            ? "border-cyan-400/60 bg-cyan-500/15 shadow-sm shadow-cyan-500/10"
-            : "border-transparent hover:bg-slate-800/70"
+            ? "border-primary/60 bg-primary/15 shadow-sm shadow-primary/10"
+            : "border-transparent hover:bg-surface/70"
             }`}
           onClick={() => setSelectedUser(bot)}
         >
           <div className="flex items-center gap-3">
             <div className="avatar online">
-              <div className="size-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                <BotIcon className="w-6 h-6 text-white" />
+              <div className="size-12 rounded-full bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center">
+                <BotIcon className="w-6 h-6 text-onPrimary" />
               </div>
             </div>
-            <h4 className="text-slate-200 font-medium">
+            <h4 className="text-content font-medium">
               {bot.fullName}
-              <span className="text-xs text-blue-400 ml-1">AI</span>
+              <span className="text-xs text-primary ml-1">AI</span>
             </h4>
           </div>
         </div>
       ))}
 
       {filteredContacts.length === 0 && filteredBots.length === 0 ? (
-        <p className="text-slate-400 text-sm text-center mt-6">No contacts found</p>
+        <p className="text-muted text-sm text-center mt-6">{t("contacts.notFound")}</p>
       ) : (
         filteredContacts.map((contact) => (
           <div
             key={contact._id}
             className={`p-4 rounded-lg cursor-pointer transition-colors border ${selectedUser?._id === contact._id
-              ? "border-cyan-400/60 bg-cyan-500/15 shadow-sm shadow-cyan-500/10"
-              : "border-transparent hover:bg-slate-800/70"
+              ? "border-primary/60 bg-primary/15 shadow-sm shadow-primary/10"
+              : "border-transparent hover:bg-surface/70"
               }`}
             onClick={() => setSelectedUser(contact)}
           >
@@ -135,11 +137,11 @@ function ContactList() {
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="truncate text-slate-200 font-medium">
+                <h4 className="truncate text-content font-medium">
                   {contact.nickname?.trim() || contact.fullName}
                 </h4>
                 {contact.nickname?.trim() && (
-                  <p className="truncate text-xs text-slate-500">{contact.fullName}</p>
+                  <p className="truncate text-xs text-muted">{contact.fullName}</p>
                 )}
               </div>
               {renderFriendButton(contact)}

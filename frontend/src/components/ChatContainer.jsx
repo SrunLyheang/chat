@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useI18nStore } from "../store/useI18nStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
@@ -22,14 +23,15 @@ const GROUP_GAP_MS = 5 * 60 * 1000; // messages closer than this collapse into o
 const isSameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
 
 const formatDayLabel = (date) => {
+  const { t, locale } = useI18nStore.getState();
   const d = new Date(date);
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
 
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+  if (d.toDateString() === today.toDateString()) return t("chat.today");
+  if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday");
+  return d.toLocaleDateString(locale(), {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -56,6 +58,7 @@ function ChatContainer() {
     setHighlightedMessageId,
   } = useChatStore();
   const { authUser } = useAuthStore();
+  const { t } = useI18nStore();
   const messageEndRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
@@ -79,7 +82,7 @@ function ChatContainer() {
     (selectedUser.participants || []).map((p) => [toUserId(p._id), p])
   );
   const senderName = (senderId) => {
-    if (toUserId(senderId) === toUserId(authUser._id)) return "You";
+    if (toUserId(senderId) === toUserId(authUser._id)) return t("chat.you");
     const p = participantMap.get(toUserId(senderId));
     return p?.fullName || "Unknown";
   };
@@ -92,17 +95,17 @@ function ChatContainer() {
       : null;
 
   const getReplySenderName = (reply) => {
-    if (!reply?.senderId) return "Message";
-    if (toUserId(reply.senderId) === toUserId(authUser._id)) return "You";
+    if (!reply?.senderId) return t("chat.message");
+    if (toUserId(reply.senderId) === toUserId(authUser._id)) return t("chat.you");
     // In a group the reply can be from any member; look them up by id.
     return isGroup ? senderName(reply.senderId) : selectedUserName;
   };
 
   const getReplyText = (reply) => {
-    if (reply?.isDeleted) return "Deleted message";
+    if (reply?.isDeleted) return t("chat.deletedMessage");
     if (reply?.text) return reply.text;
-    if (reply?.image) return "Photo";
-    return "Message";
+    if (reply?.image) return t("chat.photo");
+    return t("chat.message");
   };
 
   const startEditing = (msg) => {
@@ -169,17 +172,17 @@ function ChatContainer() {
       {currentPinned && (
         <div
           onClick={handlePinnedBarClick}
-          className="flex cursor-pointer items-center gap-3 border-b border-slate-700/50 bg-slate-800/80 px-4 py-2 transition-colors hover:bg-slate-800"
+          className="flex cursor-pointer items-center gap-3 border-b border-edge/50 bg-surface/80 px-4 py-2 transition-colors hover:bg-surface"
         >
-          <Pin className="h-4 w-4 shrink-0 text-cyan-400" />
-          <div className="min-w-0 flex-1 border-l-2 border-cyan-400/70 pl-3">
-            <p className="text-xs font-semibold text-cyan-400">
-              Pinned message
+          <Pin className="h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1 border-l-2 border-primary/70 pl-3">
+            <p className="text-xs font-semibold text-primary">
+              {t("chat.pinnedMessage")}
               {pinnedMessages.length > 1 &&
-                ` · ${((pinnedCursor % pinnedMessages.length) + 1)} of ${pinnedMessages.length}`}
+                ` · ${t("chat.ofCount", { current: (pinnedCursor % pinnedMessages.length) + 1, total: pinnedMessages.length })}`}
             </p>
-            <p className="truncate text-xs text-slate-300">
-              {currentPinned.text || (currentPinned.image ? "📷 Photo" : "Message")}
+            <p className="truncate text-xs text-content">
+              {currentPinned.text || (currentPinned.image ? t("chat.photoPreview") : t("chat.message"))}
             </p>
           </div>
           {currentPinned.image && (
@@ -196,8 +199,8 @@ function ChatContainer() {
               togglePinMessage(currentPinned._id);
               setPinnedCursor(0);
             }}
-            title="Unpin"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+            title={t("chat.unpin")}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface2 hover:text-content"
           >
             <X className="h-4 w-4" />
           </button>
@@ -229,7 +232,7 @@ function ChatContainer() {
                 <div key={msg._id} id={`msg-${msg._id}`}>
                   {showDateSeparator && (
                     <div className="my-3 flex items-center justify-center">
-                      <span className="rounded-full border border-slate-700/50 bg-slate-800/80 px-2.5 py-0.5 text-[11px] font-medium text-slate-400">
+                      <span className="rounded-full border border-edge/50 bg-surface/80 px-2.5 py-0.5 text-[11px] font-medium text-muted">
                         {formatDayLabel(msg.createdAt)}
                       </span>
                     </div>
@@ -243,13 +246,13 @@ function ChatContainer() {
                     <div
                       className={`relative max-w-[80%] px-3 py-1.5 shadow-sm transition-all sm:max-w-[70%] ${
                         isOwnMessage
-                          ? `rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-600 text-white ${
+                          ? `rounded-2xl bg-gradient-to-br from-primary to-primaryStrong text-onPrimary ${
                               isLastInGroup ? "rounded-br-md" : ""
                             }`
-                          : `rounded-2xl border border-slate-700/60 bg-slate-800 text-slate-100 ${
+                          : `rounded-2xl border border-edge/60 bg-surface text-content ${
                               isLastInGroup ? "rounded-bl-md" : ""
                             }`
-                      } ${isHighlighted ? "ring-2 ring-cyan-300/80 ring-offset-2 ring-offset-slate-900" : ""}`}
+                      } ${isHighlighted ? "ring-2 ring-primary/80 ring-offset-2 ring-offset-ground" : ""}`}
                     >
                       {!msg.isDeleted && !isEditingThis && (
                         <div
@@ -259,13 +262,13 @@ function ChatContainer() {
                         >
                           <label
                             tabIndex={0}
-                            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-slate-700/70 hover:text-slate-200"
+                            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-surface2/70 hover:text-content"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </label>
                           <ul
                             tabIndex={0}
-                            className="dropdown-content menu menu-sm z-10 mt-1 w-36 rounded-box border border-slate-700/60 bg-slate-900 p-1 text-slate-200 shadow-lg"
+                            className="dropdown-content menu menu-sm z-10 mt-1 w-36 rounded-box border border-edge/60 bg-ground p-1 text-content shadow-lg"
                           >
                             <li>
                               <button
@@ -275,7 +278,7 @@ function ChatContainer() {
                                 }}
                                 className="flex items-center gap-2"
                               >
-                                <Reply className="w-3.5 h-3.5" /> Reply
+                                <Reply className="w-3.5 h-3.5" /> {t("chat.reply")}
                               </button>
                             </li>
                             <li>
@@ -288,11 +291,11 @@ function ChatContainer() {
                               >
                                 {msg.isPinned ? (
                                   <>
-                                    <PinOff className="w-3.5 h-3.5" /> Unpin
+                                    <PinOff className="w-3.5 h-3.5" /> {t("chat.unpin")}
                                   </>
                                 ) : (
                                   <>
-                                    <Pin className="w-3.5 h-3.5" /> Pin
+                                    <Pin className="w-3.5 h-3.5" /> {t("chat.pin")}
                                   </>
                                 )}
                               </button>
@@ -306,7 +309,7 @@ function ChatContainer() {
                                   }}
                                   className="flex items-center gap-2"
                                 >
-                                  <Pencil className="w-3.5 h-3.5" /> Edit
+                                  <Pencil className="w-3.5 h-3.5" /> {t("chat.edit")}
                                 </button>
                               </li>
                             )}
@@ -319,7 +322,7 @@ function ChatContainer() {
                                   }}
                                   className="flex items-center gap-2 text-red-400"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                  <Trash2 className="w-3.5 h-3.5" /> {t("chat.delete")}
                                 </button>
                               </li>
                             )}
@@ -328,29 +331,29 @@ function ChatContainer() {
                       )}
 
                       {isGroup && !isOwnMessage && isFirstInGroup && (
-                        <p className="mb-0.5 text-xs font-semibold text-cyan-300">
+                        <p className="mb-0.5 text-xs font-semibold text-primary">
                           {senderName(msg.senderId)}
                         </p>
                       )}
 
                       {msg.isDeleted ? (
-                        <p className="text-sm italic opacity-60">This message was deleted</p>
+                        <p className="text-sm italic opacity-60">{t("chat.thisMessageDeleted")}</p>
                       ) : (
                         <>
                           {msg.replyTo?.messageId && (
                             <div
                               className={`mb-1.5 flex cursor-pointer items-center gap-2 rounded-lg border-l-2 px-2.5 py-1.5 ${
                                 isOwnMessage
-                                  ? "border-white/70 bg-white/15"
-                                  : "border-cyan-400/70 bg-slate-700/50"
+                                  ? "border-onPrimary/70 bg-onPrimary/15"
+                                  : "border-primary/70 bg-surface2/50"
                               }`}
                               onClick={() => msg.replyTo.messageId && scrollToMessage(msg.replyTo.messageId)}
                             >
                               <div className="min-w-0 flex-1">
-                                <p className={`text-xs font-semibold ${isOwnMessage ? "text-white" : "text-cyan-300"}`}>
+                                <p className={`text-xs font-semibold ${isOwnMessage ? "text-onPrimary" : "text-primary"}`}>
                                   {getReplySenderName(msg.replyTo)}
                                 </p>
-                                <p className={`truncate text-xs ${isOwnMessage ? "text-white/80" : "text-slate-300"}`}>
+                                <p className={`truncate text-xs ${isOwnMessage ? "text-onPrimary/80" : "text-content"}`}>
                                   {getReplyText(msg.replyTo)}
                                 </p>
                               </div>
@@ -381,7 +384,7 @@ function ChatContainer() {
                                   if (e.key === "Enter") saveEditing(msg._id);
                                   if (e.key === "Escape") cancelEditing();
                                 }}
-                                className="input input-sm input-bordered w-full bg-slate-950/40 text-inherit"
+                                className="input input-sm input-bordered w-full bg-ground/40 text-inherit"
                               />
                               <button onClick={() => saveEditing(msg._id)}>
                                 <Check className="w-4 h-4" />
@@ -402,14 +405,14 @@ function ChatContainer() {
 
                       <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                         {msg.isPinned && !msg.isDeleted && <Pin className="h-3 w-3" />}
-                        {msg.isEdited && !msg.isDeleted && <span className="italic">edited</span>}
-                        {new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                        {msg.isEdited && !msg.isDeleted && <span className="italic">{t("chat.edited")}</span>}
+                        {new Date(msg.createdAt).toLocaleTimeString(useI18nStore.getState().locale(), {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                         {isOwnMessage && !msg.isDeleted && !isGroup && (
                           msg.seen ? (
-                            <CheckCheck className="h-3.5 w-3.5 text-sky-200" />
+                            <CheckCheck className="h-3.5 w-3.5 text-onPrimary" />
                           ) : (
                             <Check className="h-3.5 w-3.5" />
                           )
@@ -424,8 +427,8 @@ function ChatContainer() {
             {((selectedUser.isBot && isBotThinking) || (!selectedUser.isBot && isTyping)) && (
               <div className="mt-2 flex justify-start">
                 <div
-                  className={`flex items-center gap-1 rounded-2xl rounded-bl-md border border-slate-700/60 bg-slate-800 px-3 py-2 ${
-                    selectedUser.isBot ? "text-blue-300" : "text-slate-200"
+                  className={`flex items-center gap-1 rounded-2xl rounded-bl-md border border-edge/60 bg-surface px-3 py-2 ${
+                    selectedUser.isBot ? "text-primary" : "text-content"
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
@@ -452,7 +455,7 @@ function ChatContainer() {
         >
           <button
             onClick={() => setEnlargedImage(null)}
-            className="absolute top-4 right-4 text-slate-200 hover:text-white"
+            className="absolute top-4 right-4 text-content hover:text-white"
           >
             <X className="w-7 h-7" />
           </button>
