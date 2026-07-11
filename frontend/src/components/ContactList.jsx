@@ -2,16 +2,67 @@ import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
-import { SearchIcon, BotIcon } from "lucide-react";
+import { useFriendStore } from "../store/useFriendStore";
+import { SearchIcon, BotIcon, UserPlusIcon, CheckIcon, ClockIcon } from "lucide-react";
 
 function ContactList() {
   const { getAllContacts, allContacts, setSelectedUser, selectedUser, isUserLoading } = useChatStore();
   const { onlineUsers, authUser } = useAuthStore();
+  const { relationshipTo, sendRequest, acceptRequest, loadFriendData } = useFriendStore();
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     getAllContacts();
-  }, [getAllContacts]);
+    // Needed so each row can reflect the current friend/request state.
+    loadFriendData();
+  }, [getAllContacts, loadFriendData]);
+
+  // One-click friend affordance per contact row. Stops propagation so it
+  // doesn't also open the chat.
+  const renderFriendButton = (contact) => {
+    const relationship = relationshipTo(contact._id);
+    const stop = (fn) => (e) => {
+      e.stopPropagation();
+      fn();
+    };
+
+    if (relationship === "friends") {
+      return (
+        <span className="flex shrink-0 items-center gap-1 text-xs text-cyan-400" title="Friends">
+          <CheckIcon className="h-4 w-4" />
+        </span>
+      );
+    }
+    if (relationship === "sent") {
+      return (
+        <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500" title="Request pending">
+          <ClockIcon className="h-4 w-4" />
+        </span>
+      );
+    }
+    if (relationship === "incoming") {
+      return (
+        <button
+          type="button"
+          onClick={stop(() => acceptRequest(contact))}
+          title="Accept friend request"
+          className="shrink-0 rounded-lg bg-cyan-500/20 px-2.5 py-1 text-xs text-cyan-400 transition hover:bg-cyan-500/30"
+        >
+          Accept
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={stop(() => sendRequest(contact))}
+        title="Add friend"
+        className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-cyan-400"
+      >
+        <UserPlusIcon className="h-4 w-4" />
+      </button>
+    );
+  };
 
   if (isUserLoading) return <UsersLoadingSkeleton />;
 
@@ -83,7 +134,7 @@ function ContactList() {
                   <img src={contact.profilePic || "/avatar.png"} />
                 </div>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h4 className="truncate text-slate-200 font-medium">
                   {contact.nickname?.trim() || contact.fullName}
                 </h4>
@@ -91,6 +142,7 @@ function ContactList() {
                   <p className="truncate text-xs text-slate-500">{contact.fullName}</p>
                 )}
               </div>
+              {renderFriendButton(contact)}
             </div>
           </div>
         ))
