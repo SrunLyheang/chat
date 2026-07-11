@@ -71,6 +71,7 @@ function ChatHeader() {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsMenuOpen(false);
       }
+
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -132,78 +133,78 @@ function ChatHeader() {
             </p>
           </button>
         ) : (
-        <div className="min-w-0">
-          {isEditingNickname ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                autoFocus
-                value={nicknameDraft}
-                onChange={(e) => setNicknameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveNickname();
-                  if (e.key === "Escape") setIsEditingNickname(false);
-                }}
-                maxLength={50}
-                placeholder={selectedUser.fullName}
-                className="w-40 rounded-md border border-edge bg-ground/60 px-2 py-1 text-sm text-content placeholder:text-muted focus:border-primary/60 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={saveNickname}
-                title={t("chat.saveNickname")}
-                className="text-primary hover:text-primary"
-              >
-                <CheckIcon className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsEditingNickname(false)}
-                title={t("common.cancel")}
-                className="text-muted hover:text-content"
-              >
-                <XIcon className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="group/name flex items-center gap-1.5 min-w-0">
-              <h3 className="truncate text-sm text-content font-medium">{displayName}</h3>
-              <button
-                type="button"
-                onClick={startNicknameEdit}
-                title={hasNickname ? t("chat.editNickname") : t("chat.setNickname")}
-                className="shrink-0 text-muted opacity-0 transition-opacity hover:text-content group-hover/name:opacity-100"
-              >
-                <PencilIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-
-          <p className="text-muted text-xs truncate">
-            {hasNickname && !isEditingNickname && (
-              <span className="mr-1.5 text-muted">{selectedUser.fullName} ·</span>
-            )}
-            {selectedUser.isBot ? (
-              isBotThinking ? (
-                <span className="text-primary inline-flex items-center gap-1">
-                  {t("chat.aiThinking")}
-                  <span className="inline-flex gap-0.5">
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce" />
-                  </span>
-                </span>
-              ) : (
-                <span className="text-primary font-medium">{t("chat.ai")}</span>
-              )
-            ) : isTyping ? (
-              <span className="text-primary">{t("chat.typing")}</span>
-            ) : isOnline ? (
-              t("chat.online")
+          <div className="min-w-0">
+            {isEditingNickname ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={nicknameDraft}
+                  onChange={(e) => setNicknameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveNickname();
+                    if (e.key === "Escape") setIsEditingNickname(false);
+                  }}
+                  maxLength={50}
+                  placeholder={selectedUser.fullName}
+                  className="w-40 rounded-md border border-edge bg-ground/60 px-2 py-1 text-sm text-content placeholder:text-muted focus:border-primary/60 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={saveNickname}
+                  title={t("chat.saveNickname")}
+                  className="text-primary hover:text-primary"
+                >
+                  <CheckIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingNickname(false)}
+                  title={t("common.cancel")}
+                  className="text-muted hover:text-content"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
             ) : (
-              t("chat.offline")
+              <div className="group/name flex items-center gap-1.5 min-w-0">
+                <h3 className="truncate text-sm text-content font-medium">{displayName}</h3>
+                <button
+                  type="button"
+                  onClick={startNicknameEdit}
+                  title={hasNickname ? t("chat.editNickname") : t("chat.setNickname")}
+                  className="shrink-0 text-muted opacity-0 transition-opacity hover:text-content group-hover/name:opacity-100"
+                >
+                  <PencilIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
             )}
-          </p>
-        </div>
+
+            <p className="text-muted text-xs truncate">
+              {hasNickname && !isEditingNickname && (
+                <span className="mr-1.5 text-muted">{selectedUser.fullName} ·</span>
+              )}
+              {selectedUser.isBot ? (
+                isBotThinking ? (
+                  <span className="text-primary inline-flex items-center gap-1">
+                    {t("chat.aiThinking")}
+                    <span className="inline-flex gap-0.5">
+                      <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1 h-1 rounded-full bg-primary animate-bounce" />
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-primary font-medium">{t("chat.ai")}</span>
+                )
+              ) : isTyping ? (
+                <span className="text-primary">{t("chat.typing")}</span>
+              ) : isOnline ? (
+                t("chat.online")
+              ) : (
+                t("chat.offline")
+              )}
+            </p>
+          </div>
         )}
       </div>
 
@@ -221,18 +222,18 @@ function ChatHeader() {
         )}
 
         {!isGroup && (
-        <button
-          type="button"
-          onClick={() => togglePinChat(selectedUser._id)}
-          title={selectedUser.isPinnedChat ? t("chat.unpinChat") : t("chat.pinChat")}
-          className="rounded-full p-2 transition hover:bg-surface2/70"
-        >
-          {selectedUser.isPinnedChat ? (
-            <PinOffIcon className="h-5 w-5 text-primary hover:text-primary" />
-          ) : (
-            <PinIcon className="h-5 w-5 text-muted hover:text-content" />
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => togglePinChat(selectedUser._id)}
+            title={selectedUser.isPinnedChat ? t("chat.unpinChat") : t("chat.pinChat")}
+            className="rounded-full p-2 transition hover:bg-surface2/70"
+          >
+            {selectedUser.isPinnedChat ? (
+              <PinOffIcon className="h-5 w-5 text-primary hover:text-primary" />
+            ) : (
+              <PinIcon className="h-5 w-5 text-muted hover:text-content" />
+            )}
+          </button>
         )}
 
         {!isGroup && !selectedUser.isBot && (

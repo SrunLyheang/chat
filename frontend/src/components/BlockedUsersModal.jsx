@@ -35,10 +35,8 @@ function BlockedUsersModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-edge/50 px-5 py-4">
-          <h3 className="text-content font-medium">{t("blocked.title")}</h3>
-        <div className="flex items-center justify-between border-b border-slate-700/50 px-5 py-4">
-          <h3 id="blocked-users-title" className="text-slate-200 font-medium">
-            Blocked users
+          <h3 id="blocked-users-title" className="text-content font-medium">
+            {t("blocked.title")}
           </h3>
           <button
             type="button"

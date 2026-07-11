@@ -9,6 +9,7 @@ import {
   ShieldBanIcon,
   PaletteIcon,
   CheckIcon,
+  MoreVerticalIcon,
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
@@ -26,11 +27,13 @@ function ProfileHeader() {
   const [selectedImg, setSelectedImg] = useState(null);
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const botMenuRef = useRef(null);
   const themeMenuRef = useRef(null);
+  const moreMenuRef = useRef(null);
 
   const bots = allContacts.filter((c) => c.isBot);
 
@@ -45,6 +48,12 @@ function ProfileHeader() {
       }
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
         setIsThemeMenuOpen(false);
+      }
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(e.target)
+      ) {
+        setIsMoreMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -118,7 +127,7 @@ function ProfileHeader() {
 
           {/* USERNAME & ONLINE TEXT */}
           <div>
-            <h3 className="text-content font-medium text-base max-w-[180px] truncate">
+            <h3 className="text-content font-medium text-base max-w-[120px] xl:max-w-[180px] truncate">
               {authUser.fullName}
             </h3>
 
@@ -127,7 +136,7 @@ function ProfileHeader() {
         </div>
 
         {/* BUTTONS */}
-        <div className="flex gap-3 items-center">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* THEME PICKER */}
           <div className="relative" ref={themeMenuRef}>
             <button
@@ -207,41 +216,73 @@ function ProfileHeader() {
               )}
             </div>
           )}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className="text-muted hover:text-primary transition-colors"
+            >
+              <MoreVerticalIcon className="size-5" />
+            </button>
 
-          {/* BLOCKED USERS BTN */}
-          <button
-            className="text-muted hover:text-content transition-colors"
-            onClick={() => setIsBlockedModalOpen(true)}
-            title={t("profile.blockedUsers")}
-          >
-            <ShieldBanIcon className="size-5" />
-          </button>
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-edge/50 bg-ground shadow-lg z-20 overflow-hidden">
 
-          {/* LOGOUT BTN */}
-          <button
-            className="text-muted hover:text-content transition-colors"
-            onClick={logout}
-            title={t("profile.logout")}
-          >
-            <LogOutIcon className="size-5" />
-          </button>
+                {/* Language */}
+                <button
+                  onClick={() => {
+                    toggleLang();
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 flex justify-between items-center hover:bg-surface text-sm"
+                >
+                  <span>{t("profile.language")}</span>
+                  <span>{currentLangLabel}</span>
+                </button>
 
-          {/* SOUND TOGGLE BTN */}
-          <button
-            className="text-muted hover:text-content transition-colors"
-            title={t("profile.sound")}
-            onClick={() => {
-              mouseClickSound.currentTime = 0;
-              mouseClickSound.play().catch((error) => console.log("Audio play failed:", error));
-              toggleSound();
-            }}
-          >
-            {isSoundEnabled ? (
-              <Volume2Icon className="size-5" />
-            ) : (
-              <VolumeOffIcon className="size-5" />
+                {/* Sound */}
+                <button
+                  onClick={() => {
+                    mouseClickSound.currentTime = 0;
+                    mouseClickSound.play().catch(() => { });
+                    toggleSound();
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 flex items-center gap-2 hover:bg-surface text-sm"
+                >
+                  {isSoundEnabled ? (
+                    <Volume2Icon className="size-4" />
+                  ) : (
+                    <VolumeOffIcon className="size-4" />
+                  )}
+
+                  {t("profile.sound")}
+                </button>
+
+                {/* Blocked */}
+                <button
+                  onClick={() => {
+                    setIsBlockedModalOpen(true);
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 flex items-center gap-2 hover:bg-surface text-sm"
+                >
+                  <ShieldBanIcon className="size-4" />
+                  {t("profile.blockedUsers")}
+                </button>
+
+                {/* Logout */}
+                <button
+                  onClick={logout}
+                  className="w-full px-3 py-2 flex items-center gap-2 hover:bg-surface text-sm text-red-500"
+                >
+                  <LogOutIcon className="size-4" />
+                  {t("profile.logout")}
+                </button>
+
+              </div>
             )}
-          </button>
+          </div>
+
         </div>
       </div>
 
