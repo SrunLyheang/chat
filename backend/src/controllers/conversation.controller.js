@@ -188,6 +188,9 @@ export const renameGroup = async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Group name is required." });
     }
+    if (!mongoose.isValidObjectId(conversationId)) {
+      return res.status(400).json({ message: "Invalid conversation." });
+    }
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
@@ -216,6 +219,10 @@ export const addParticipants = async (req, res) => {
   try {
     const { id: conversationId } = req.params;
     const { participantIds } = req.body;
+
+    if (!mongoose.isValidObjectId(conversationId)) {
+      return res.status(400).json({ message: "Invalid conversation." });
+    }
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
@@ -262,12 +269,22 @@ export const removeParticipant = async (req, res) => {
   try {
     const { id: conversationId, userId } = req.params;
 
+    if (!mongoose.isValidObjectId(conversationId)) {
+      return res.status(400).json({ message: "Invalid conversation." });
+    }
+
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       return res.status(404).json({ message: "Conversation not found." });
     }
     if (!isAdmin(conversation, req.user._id)) {
       return res.status(403).json({ message: "Only admins can remove members." });
+    }
+    // Self-removal must go through leaveGroup, which handles admin handoff and
+    // empty-group cleanup. Blocking it here also guarantees the group keeps at
+    // least one participant and one admin (the requester) after any removal.
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ message: "Use leave group to remove yourself." });
     }
 
     conversation.participants = conversation.participants.filter(
@@ -295,6 +312,10 @@ export const leaveGroup = async (req, res) => {
   try {
     const { id: conversationId } = req.params;
     const myId = req.user._id;
+
+    if (!mongoose.isValidObjectId(conversationId)) {
+      return res.status(400).json({ message: "Invalid conversation." });
+    }
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
