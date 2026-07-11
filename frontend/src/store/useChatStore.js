@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import useAuthStore from './useAuthStore';
+import { tr } from "./useI18nStore";
 import { useFriendStore } from './useFriendStore';
 
 
@@ -80,13 +81,13 @@ export const useChatStore = create((set, get) => ({
     const isIncoming = messageSenderId !== authUserId;
     const shouldIncrementUnread = options.shouldIncrementUnread ?? true;
     const preview = message.image
-      ? (messageSenderId === authUserId ? "You: 📷 Photo" : "📷 Photo")
-      : message.text || "New message";
+      ? (messageSenderId === authUserId ? tr("chat.youSaid", { text: tr("chat.photoPreview") }) : tr("chat.photoPreview"))
+      : message.text || tr("chat.newMessage");
     const existingChat =
       state.chats.find((chat) => toUserId(chat._id) === chatUserId) ||
       state.allContacts.find((contact) => toUserId(contact._id) === chatUserId) ||
       sender ||
-      { _id: chatUserId, fullName: "New message", profilePic: null };
+      { _id: chatUserId, fullName: tr("chat.newMessage"), profilePic: null };
 
     const existingChatWithPreview = {
       ...existingChat,
@@ -99,7 +100,7 @@ export const useChatStore = create((set, get) => ({
         isDeleted: message.isDeleted,
       },
       lastMessagePreview: messageSenderId === authUserId
-        ? `You: ${message.text || "📷 Photo"}`
+        ? tr("chat.youSaid", { text: message.text || tr("chat.photoPreview") })
         : preview,
       lastMessageAt: message.createdAt,
     };
@@ -127,7 +128,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get("/messages/contacts");
       set({ allContacts: res.data });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load contacts");
+      toast.error(error.response?.data?.message || tr("toast.loadContactsFailed"));
     } finally {
       set({ isUserLoading: false });
     }
@@ -139,7 +140,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get("/messages/chats");
       set({ chats: res.data });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load chats");
+      toast.error(error.response?.data?.message || tr("toast.loadChatsFailed"));
     } finally {
       set({ isUserLoading: false });
     }
@@ -151,7 +152,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: sortMessages(res.data) });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || tr("toast.somethingWrong"));
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -163,7 +164,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get(`/conversations/${conversationId}/messages`);
       set({ messages: sortMessages(res.data) });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || tr("toast.somethingWrong"));
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -197,7 +198,7 @@ export const useChatStore = create((set, get) => ({
 
     const isIncoming = toUserId(message.senderId) !== authUserId;
     const shouldIncrementUnread = (options.shouldIncrementUnread ?? true) && isIncoming;
-    const preview = message.image ? "📷 Photo" : message.text || "New message";
+    const preview = message.image ? tr("chat.photoPreview") : message.text || tr("chat.newMessage");
 
     set((state) => {
       const currentUnread = state.unreadChats[conversationId];
@@ -211,7 +212,7 @@ export const useChatStore = create((set, get) => ({
           createdAt: message.createdAt,
           isDeleted: message.isDeleted,
         },
-        lastMessagePreview: toUserId(message.senderId) === authUserId ? `You: ${message.text || "📷 Photo"}` : preview,
+        lastMessagePreview: toUserId(message.senderId) === authUserId ? tr("chat.youSaid", { text: message.text || tr("chat.photoPreview") }) : preview,
         lastMessageAt: message.createdAt,
       };
       const otherChats = state.chats.filter((chat) => toUserId(chat._id) !== conversationId);
@@ -285,7 +286,7 @@ export const useChatStore = create((set, get) => ({
       }
     } catch (error) {
       set({ messages: messages, replyingTo, isBotThinking: false });
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || tr("toast.somethingWrong"));
 
 
     }
@@ -314,7 +315,7 @@ export const useChatStore = create((set, get) => ({
       const shouldNotify = !isMessageSentFromSelectedUser;
       get().promoteChatForMessage(
         newMessage,
-        sender || { _id: newMessage.senderId, fullName: "New message", profilePic: null },
+        sender || { _id: newMessage.senderId, fullName: tr("chat.newMessage"), profilePic: null },
         { shouldIncrementUnread: shouldNotify }
       );
       // if (shouldNotify && get().isSoundEnabled) {
@@ -428,7 +429,7 @@ export const useChatStore = create((set, get) => ({
       });
     } catch (error) {
       set({ messages: previousMessages });
-      toast.error(error.response?.data?.message || "Failed to edit message");
+      toast.error(error.response?.data?.message || tr("toast.editFailed"));
     }
   },
 
@@ -439,7 +440,7 @@ export const useChatStore = create((set, get) => ({
         messages: get().messages.map((msg) => (msg._id === res.data._id ? res.data : msg)),
       });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to pin message");
+      toast.error(error.response?.data?.message || tr("toast.pinMessageFailed"));
     }
   },
 
@@ -456,7 +457,7 @@ export const useChatStore = create((set, get) => ({
         selectedUser: state.selectedUser ? applyPin(state.selectedUser) : state.selectedUser,
       }));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to pin chat");
+      toast.error(error.response?.data?.message || tr("toast.pinChatFailed"));
     }
   },
 
@@ -465,7 +466,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get("/users/blocked");
       set({ blockedUsers: res.data });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load blocked users");
+      toast.error(error.response?.data?.message || tr("toast.loadBlockedFailed"));
     }
   },
 
@@ -499,6 +500,7 @@ export const useChatStore = create((set, get) => ({
         };
       });
 
+      toast.success(isBlocked ? tr("toast.userBlocked") : tr("toast.userUnblocked"));
       if (isBlocked) {
         // Mirror the server-side cleanup: blocking ends the friendship and any
         // pending requests, so prune the Friends tab lists immediately too.
@@ -513,7 +515,7 @@ export const useChatStore = create((set, get) => ({
       // Refresh contacts so an unblocked user reappears in the directory.
       if (!isBlocked) get().getAllContacts();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update block status");
+      toast.error(error.response?.data?.message || tr("toast.blockFailed"));
     }
   },
 
@@ -530,7 +532,7 @@ export const useChatStore = create((set, get) => ({
         selectedUser: state.selectedUser ? applyNickname(state.selectedUser) : state.selectedUser,
       }));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to set nickname");
+      toast.error(error.response?.data?.message || tr("toast.nicknameFailed"));
     }
   },
 
@@ -555,7 +557,7 @@ export const useChatStore = create((set, get) => ({
       });
     } catch (error) {
       set({ messages: previousMessages });
-      toast.error(error.response?.data?.message || "Failed to delete message");
+      toast.error(error.response?.data?.message || tr("toast.deleteFailed"));
     }
   },
 }));

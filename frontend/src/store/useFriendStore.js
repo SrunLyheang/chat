@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
+import { tr } from "./useI18nStore";
 
 const toId = (value) => (value ? value.toString() : "");
 
@@ -25,7 +26,7 @@ export const useFriendStore = create((set, get) => ({
         sentRequests: sent.data,
       });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load friends");
+      toast.error(error.response?.data?.message || tr("toast.loadFriendsFailed"));
     } finally {
       set({ isFriendsLoading: false });
     }
@@ -56,17 +57,17 @@ export const useFriendStore = create((set, get) => ({
           incomingRequests: state.incomingRequests.filter((u) => toId(u._id) !== id),
           sentRequests: state.sentRequests.filter((u) => toId(u._id) !== id),
         }));
-        toast.success("You are now friends");
+        toast.success(tr("toast.nowFriends"));
       } else {
         set((state) => ({
           sentRequests: state.sentRequests.some((u) => toId(u._id) === id)
             ? state.sentRequests
             : [...state.sentRequests, user],
         }));
-        toast.success("Friend request sent");
+        toast.success(tr("toast.requestSent"));
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to send request");
+      toast.error(error.response?.data?.message || tr("toast.requestFailed"));
     }
   },
 
@@ -81,9 +82,9 @@ export const useFriendStore = create((set, get) => ({
           : [...state.friends, user],
         incomingRequests: state.incomingRequests.filter((u) => toId(u._id) !== id),
       }));
-      toast.success("Friend request accepted");
+      toast.success(tr("toast.requestAccepted"));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to accept request");
+      toast.error(error.response?.data?.message || tr("toast.acceptFailed"));
     }
   },
 
@@ -96,7 +97,7 @@ export const useFriendStore = create((set, get) => ({
         incomingRequests: state.incomingRequests.filter((u) => toId(u._id) !== id),
       }));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to decline request");
+      toast.error(error.response?.data?.message || tr("toast.declineFailed"));
     }
   },
 
@@ -109,7 +110,7 @@ export const useFriendStore = create((set, get) => ({
         sentRequests: state.sentRequests.filter((u) => toId(u._id) !== id),
       }));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to cancel request");
+      toast.error(error.response?.data?.message || tr("toast.cancelFailed"));
     }
   },
 
@@ -121,9 +122,9 @@ export const useFriendStore = create((set, get) => ({
       set((state) => ({
         friends: state.friends.filter((u) => toId(u._id) !== id),
       }));
-      toast.success("Friend removed");
+      toast.success(tr("toast.friendRemoved"));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to remove friend");
+      toast.error(error.response?.data?.message || tr("toast.removeFriendFailed"));
     }
   },
 }));

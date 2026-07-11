@@ -3,6 +3,7 @@ import { axiosInstance } from "../lib/axios"
 import { toast } from 'react-hot-toast'
 import { io } from "socket.io-client"
 import { useChatStore } from "./useChatStore"
+import { tr } from "./useI18nStore";
 import { BotIcon, UsersIcon } from "lucide-react"
 
 const toUserId = (value) => (value ? value.toString() : "");
@@ -68,13 +69,13 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/signup", data)
       set({ pendingUser: res.data })
       setStoredPendingEmail(res.data.email)
-      toast.success("Signup successful! Check your email for verification code.")
+      toast.success(tr("toast.signupSuccess"))
       get().connectSocket()
 
       return true
 
     } catch (error) {
-      toast.error(error.response?.data?.message || "Sign up failed. Please try again.")
+      toast.error(error.response?.data?.message || tr("toast.signupFailed"))
       return false
     } finally {
       set({ isSigningUp: false })
@@ -87,11 +88,11 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data)
       set({ authUser: res.data, pendingUser: null })
       setStoredPendingEmail(null)
-      toast.success("Login successful!")
+      toast.success(tr("toast.loginSuccess"))
       get().connectSocket()
 
     } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed. Please try again.")
+      toast.error(error.response?.data?.message || tr("toast.loginFailed"))
     } finally {
       set({ isLoggingIn: false })
     }
@@ -106,11 +107,11 @@ export const useAuthStore = create((set, get) => ({
       })
       set({ authUser: res.data, pendingUser: null })
       setStoredPendingEmail(null)
-      toast.success("Email verified successfully!")
+      toast.success(tr("toast.emailVerified"))
       return true
 
     } catch (error) {
-      toast.error(error.response?.data?.message || "Verification failed. Please try again.")
+      toast.error(error.response?.data?.message || tr("toast.verifyFailed"))
       return false
     } finally {
       set({ isVerifying: false })
@@ -122,10 +123,10 @@ export const useAuthStore = create((set, get) => ({
     set({ isResendingVerification: true })
     try {
       const res = await axiosInstance.post("/auth/resend-verification", { email })
-      toast.success(res.data?.message || "Verification email resent.")
+      toast.success(res.data?.message || tr("toast.resendSuccess"))
       return true
     } catch (error) {
-      toast.error(error.response?.data?.message || "Could not resend verification email.")
+      toast.error(error.response?.data?.message || tr("toast.resendFailed"))
       return false
     } finally {
       set({ isResendingVerification: false })
@@ -156,10 +157,10 @@ export const useAuthStore = create((set, get) => ({
     try {
       await axiosInstance.post("/auth/logout")
       set({ authUser: null })
-      toast.success("Logged out successfully")
+      toast.success(tr("toast.loggedOut"))
       get().disconnectSocket()
     } catch (error) {
-      toast.error(error.response?.data?.message || "Logout failed")
+      toast.error(error.response?.data?.message || tr("toast.logoutFailed"))
     }
   },
   updateProfile: async (data) => {
@@ -167,9 +168,9 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.put("/auth/update-profile", data)
       set({ authUser: res.data })
-      toast.success("Profile updated successfully!")
+      toast.success(tr("toast.profileUpdated"))
     } catch (error) {
-      toast.error(error.response?.data?.message || "Profile update failed. Please try again.")
+      toast.error(error.response?.data?.message || tr("toast.profileUpdateFailed"))
     } finally {
       set({ isUpdatingProfile: false })
     }
@@ -196,21 +197,21 @@ export const useAuthStore = create((set, get) => ({
 
     socket.on("callDeclined", () => {
       import("./useCallStore").then(({ useCallStore }) => {
-        toast.error("The other person declined the call.");
+        toast.error(tr("toast.callDeclined"));
         useCallStore.getState().declineCall();
       });
     });
 
     socket.on("callAnswered", ({ receiverName }) => {
       import("./useCallStore").then(({ useCallStore }) => {
-        toast.success(`${receiverName} joined the call`);
+        toast.success(tr("toast.joinedCall", { name: receiverName }));
         useCallStore.getState().setCallStatus("connected");
       });
     });
 
     socket.on("callEnded", () => {
       import("./useCallStore").then(({ useCallStore }) => {
-        toast("The call has ended.", { icon: "📞" });
+        toast(tr("toast.callEnded"), { icon: "📞" });
         useCallStore.getState().handleCallLeft();
       });
     });
@@ -237,30 +238,30 @@ export const useAuthStore = create((set, get) => ({
           <div
             onClick={() => {
               chatStore.setSelectedUser(
-                sender || { _id: message.senderId, fullName: "New message", profilePic: null }
+                sender || { _id: message.senderId, fullName: tr("chat.newMessage"), profilePic: null }
               );
               chatStore.setActiveTab("chats");
               toast.dismiss(t.id);
             }}
-            className="max-w-sm w-full bg-slate-800 border border-slate-700/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/80 transition-colors"
+            className="max-w-sm w-full bg-surface border border-edge/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-surface2/80 transition-colors"
           >
             {sender?.isBot ? (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                <BotIcon className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center flex-shrink-0">
+                <BotIcon className="w-5 h-5 text-onPrimary" />
               </div>
             ) : (
               <img
                 src={sender?.profilePic || "/avatar.png"}
-                alt={sender?.fullName || "New message"}
+                alt={sender?.fullName || tr("chat.newMessage")}
                 className="w-10 h-10 rounded-full object-cover flex-shrink-0"
               />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-slate-100 font-medium text-sm truncate">
-                {sender?.fullName || "New message"}
+              <p className="text-content font-medium text-sm truncate">
+                {sender?.fullName || tr("chat.newMessage")}
               </p>
-              <p className="text-slate-400 text-xs truncate">
-                {message.image ? "📷 Photo" : message.text}
+              <p className="text-muted text-xs truncate">
+                {message.image ? tr("chat.photoPreview") : message.text}
               </p>
             </div>
           </div>
@@ -294,7 +295,7 @@ export const useAuthStore = create((set, get) => ({
         (p) => toUserId(p._id) === toUserId(message.senderId)
       );
       const groupName = group?.fullName || "Group";
-      const preview = message.image ? "📷 Photo" : message.text || "New message";
+      const preview = message.image ? tr("chat.photoPreview") : message.text || tr("chat.newMessage");
 
       if (chatStore.isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
@@ -319,14 +320,14 @@ export const useAuthStore = create((set, get) => ({
               chatStore.setActiveTab("chats");
               toast.dismiss(t.id);
             }}
-            className="max-w-sm w-full bg-slate-800 border border-slate-700/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/80 transition-colors"
+            className="max-w-sm w-full bg-surface border border-edge/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-surface2/80 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center flex-shrink-0">
-              <UsersIcon className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center flex-shrink-0">
+              <UsersIcon className="w-5 h-5 text-onPrimary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-slate-100 font-medium text-sm truncate">{groupName}</p>
-              <p className="text-slate-400 text-xs truncate">
+              <p className="text-content font-medium text-sm truncate">{groupName}</p>
+              <p className="text-muted text-xs truncate">
                 {sender ? `${sender.fullName}: ${preview}` : preview}
               </p>
             </div>
@@ -359,7 +360,7 @@ export const useAuthStore = create((set, get) => ({
         chatStore.setSelectedUser(null);
       }
       chatStore.getMyChatPartners();
-      toast("You were removed from a group.", { icon: "👋" });
+      toast(tr("toast.removedFromGroup"), { icon: "👋" });
     });
   },
   disconnectSocket: () => {
