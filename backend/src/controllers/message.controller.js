@@ -3,7 +3,19 @@ import { uploadImage } from "../../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import Conversation from "../models/Conversation.js";
 import { getBotReply } from "../../lib/ai/index.js";
+
+// Deliver a message-related event to the right audience: a group's room for
+// group messages, or the single other participant's socket for 1:1 messages.
+const emitToMessageAudience = (message, event, payload) => {
+  if (message.conversationId) {
+    io.to(message.conversationId.toString()).emit(event, payload);
+    return;
+  }
+  const receiverSocketId = getReceiverSocketId(message.receiverId);
+  if (receiverSocketId) io.to(receiverSocketId).emit(event, payload);
+};
 
 const getPreviewText = (message, currentUserId) => {
   if (!message) return "";
@@ -37,7 +49,11 @@ export const getAllContacts = async (req, res) => {
 
   try {
     const loggedInUserId = req.user._id;
-    const filteredUser = await User.find({ _id: { $ne: loggedInUserId } }).select("-password")
+    // Hide anyone this user has blocked from their contact directory.
+    const blockedIds = req.user.blockedUsers || [];
+    const filteredUser = await User.find({
+      _id: { $ne: loggedInUserId, $nin: blockedIds },
+    }).select("-password")
     res.status(200).json(filteredUser.map((user) => withViewerMeta(user, req.user)));
   } catch (error) {
     console.log("Error in getAllContacts: ", error);
@@ -50,6 +66,16 @@ export const getMessagesByUserId = async (req, res) => {
   try {
     const myId = req.user._id
     const { id: userToChatId } = req.params
+
+    // If the viewer has blocked this user, hide the conversation from the
+    // viewer only. We check the viewer's OWN blockedUsers list — never the
+    // other user's — so a block never hides the blocked person's own history.
+    const blockedByMe = (req.user.blockedUsers || []).some(
+      (id) => id.toString() === userToChatId
+    );
+    if (blockedByMe) {
+      return res.status(200).json([]);
+    }
 
     const messages = await Message.find({
       $or: [
@@ -97,12 +123,30 @@ export const sendMessage = async (req, res) => {
     if (senderId.equals(receiverId)) {
       return res.status(400).json({ message: "Cannot send messages to yourself." });
     }
-    // Fetch the receiver once — used for both the existence check and,
-    // if it's a bot, to know which provider/model to reply with.
-    const receiver = await User.findById(receiverId).select("isBot botProvider botModel");
+
+    // Don't let a user message someone they've blocked.
+    const iBlockedReceiver = (req.user.blockedUsers || []).some(
+      (id) => id.toString() === receiverId
+    );
+    if (iBlockedReceiver) {
+      return res.status(403).json({ message: "You have blocked this user. Unblock them to send messages." });
+    }
+
+    // Fetch the receiver once — used for the existence check, to know which
+    // provider/model to reply with if it's a bot, and to see whether the
+    // receiver has blocked the sender (blockedUsers must be selected or the
+    // check below silently no-ops).
+    const receiver = await User.findById(receiverId).select("isBot botProvider botModel blockedUsers");
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
     }
+
+    // If the receiver has blocked the sender, we still save the message so the
+    // sender's own view is unaffected (no error, message appears in their
+    // thread), but we skip realtime delivery so the blocker never sees it.
+    const receiverBlockedSender = (receiver.blockedUsers || []).some(
+      (id) => id.toString() === senderId.toString()
+    );
 
     let replySnapshot;
     if (replyTo) {
@@ -150,13 +194,18 @@ export const sendMessage = async (req, res) => {
       replyTo: replySnapshot,
     });
     await newMessage.save();
-    const receiverSocketId = getReceiverSocketId(receiverId)
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage)
+    // Skip realtime delivery if the receiver has blocked the sender — the
+    // message is saved but the blocker never gets pinged (and won't see it on
+    // next fetch, since getMessagesByUserId returns [] for blocked partners).
+    if (!receiverBlockedSender) {
+      const receiverSocketId = getReceiverSocketId(receiverId)
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("newMessage", newMessage)
+      }
     }
     res.status(201).json(newMessage);
 
-    if (receiver.isBot && text) {
+    if (receiver.isBot && text && !receiverBlockedSender) {
       const bot = { provider: receiver.botProvider, model: receiver.botModel };
 
       // Pull recent turns from this conversation so the bot has memory.
@@ -234,10 +283,7 @@ export const editMessage = async (req, res) => {
     message.isEdited = true;
     await message.save();
 
-    const receiverSocketId = getReceiverSocketId(message.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageEdited", message);
-    }
+    emitToMessageAudience(message, "messageEdited", message);
 
     res.status(200).json(message);
   } catch (error) {
@@ -282,13 +328,10 @@ export const deleteMessage = async (req, res) => {
       })
     );
 
-    const receiverSocketId = getReceiverSocketId(message.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageDeleted", message);
-      updatedReplyMessages.forEach((updatedReplyMessage) => {
-        io.to(receiverSocketId).emit("messageEdited", updatedReplyMessage);
-      });
-    }
+    emitToMessageAudience(message, "messageDeleted", message);
+    updatedReplyMessages.forEach((updatedReplyMessage) => {
+      emitToMessageAudience(updatedReplyMessage, "messageEdited", updatedReplyMessage);
+    });
 
     res.status(200).json({
       deletedMessages: [message],
@@ -309,7 +352,14 @@ export const togglePinMessage = async (req, res) => {
     if (!message) {
       return res.status(404).json({ message: "Message not found." });
     }
-    if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
+    // Group message: any member may pin. 1:1 message: only the two participants.
+    if (message.conversationId) {
+      const conversation = await Conversation.findById(message.conversationId).select("participants");
+      const isMember = conversation?.participants?.some((id) => id.equals(myId));
+      if (!isMember) {
+        return res.status(403).json({ message: "You can only pin messages in your own chats." });
+      }
+    } else if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
       return res.status(403).json({ message: "You can only pin messages in your own chats." });
     }
     if (message.isDeleted) {
@@ -321,12 +371,8 @@ export const togglePinMessage = async (req, res) => {
     message.pinnedBy = message.isPinned ? myId : undefined;
     await message.save();
 
-    // let the other participant's open chat reflect the pin in real time
-    const otherUserId = message.senderId.equals(myId) ? message.receiverId : message.senderId;
-    const otherSocketId = getReceiverSocketId(otherUserId);
-    if (otherSocketId) {
-      io.to(otherSocketId).emit("messagePinned", message);
-    }
+    // let the other participant(s)' open chat reflect the pin in real time
+    emitToMessageAudience(message, "messagePinned", message);
 
     res.status(200).json(message);
   } catch (error) {
@@ -406,8 +452,14 @@ export const getChatPartners = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
     const loggedInUserIdStr = loggedInUserId.toString();
+    // Partners the viewer has blocked should not appear in their chat list.
+    const blockedIdSet = new Set((req.user.blockedUsers || []).map((id) => id.toString()));
 
+    // Only 1:1 messages here — group messages (which have conversationId and no
+    // receiverId) are handled separately below and would otherwise break the
+    // sender/receiver pairing loop. `conversationId: null` matches missing too.
     const messages = await Message.find({
+      conversationId: null,
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
     }).sort({ createdAt: -1 });
 
@@ -419,6 +471,7 @@ export const getChatPartners = async (req, res) => {
         : msg.senderId.toString();
 
       if (partnerId === loggedInUserIdStr) return;
+      if (blockedIdSet.has(partnerId)) return;
 
       const currentLatest = latestMessagesByPartner.get(partnerId);
       if (!currentLatest || new Date(msg.createdAt) > new Date(currentLatest.createdAt)) {
@@ -453,7 +506,45 @@ export const getChatPartners = async (req, res) => {
       })
       .filter(Boolean);
 
-    res.status(200).json(response);
+    // Merge in the viewer's group conversations so the frontend gets a single
+    // recency-sorted list instead of having to interleave two sources itself.
+    const groups = await Conversation.find({ participants: loggedInUserId })
+      .populate("participants", "fullName profilePic isBot");
+
+    const groupRows = await Promise.all(
+      groups.map(async (group) => {
+        const lastMessage = await Message.findOne({ conversationId: group._id }).sort({ createdAt: -1 });
+        return {
+          _id: group._id,
+          isGroup: true,
+          fullName: group.name,
+          groupAvatar: group.avatar,
+          participants: group.participants,
+          admins: group.admins,
+          createdBy: group.createdBy,
+          lastMessage: lastMessage
+            ? {
+              _id: lastMessage._id,
+              text: lastMessage.text,
+              image: lastMessage.image,
+              senderId: lastMessage.senderId,
+              createdAt: lastMessage.createdAt,
+              isDeleted: lastMessage.isDeleted,
+            }
+            : null,
+          lastMessagePreview: lastMessage
+            ? getPreviewText(lastMessage, loggedInUserId)
+            : "No messages yet",
+          lastMessageAt: lastMessage ? lastMessage.createdAt : group.updatedAt,
+        };
+      })
+    );
+
+    const combined = [...response, ...groupRows].sort(
+      (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+    );
+
+    res.status(200).json(combined);
   } catch (error) {
     console.log("Error in getChatPartners controller : ", error.message);
     res.status(500).json({ error: "Internal server error" });

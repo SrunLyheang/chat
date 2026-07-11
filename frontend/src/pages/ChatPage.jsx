@@ -6,9 +6,16 @@ import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import ContactList from "../components/ContactList";
 import ProfileHeader from "../components/ProfileHeader";
 import ChatList from "../components/ChatList";
+import FriendsPanel from "../components/FriendsPanel";
 
 function ChatPage() {
   const { activeTab, selectedUser } = useChatStore();
+
+  const renderSidebarList = () => {
+    if (activeTab === "chats") return <ChatList />;
+    if (activeTab === "friends") return <FriendsPanel />;
+    return <ContactList />;
+  };
   return (
     <div className="fixed inset-0 flex">
       <BorderAnimatedContainer>
@@ -21,7 +28,7 @@ function ChatPage() {
           <ActiveTabSwitch />
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {activeTab === "chats" ? <ChatList /> : <ContactList />}
+            {renderSidebarList()}
           </div>
         </div>
 
