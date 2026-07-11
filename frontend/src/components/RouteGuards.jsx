@@ -2,8 +2,8 @@ import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 
 const FullscreenSpinner = () => (
-  <div className="w-full h-screen flex items-center justify-center bg-slate-900">
-    <div className="w-8 h-8 border-2 border-slate-600 border-t-blue-500 rounded-full animate-spin" />
+  <div className="w-full h-screen flex items-center justify-center bg-ground">
+    <div className="w-8 h-8 border-2 border-edge border-t-primary rounded-full animate-spin" />
   </div>
 );
 

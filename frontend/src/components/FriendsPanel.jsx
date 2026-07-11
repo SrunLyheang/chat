@@ -3,6 +3,7 @@ import { CheckIcon, XIcon, UserMinusIcon, MessageSquareIcon } from "lucide-react
 import { useFriendStore } from "../store/useFriendStore";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useI18nStore } from "../store/useI18nStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 
 // The "Friends" tab: a curated personal contact list, separate from the open
@@ -23,6 +24,7 @@ function FriendsPanel() {
   } = useFriendStore();
   const { setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const { t } = useI18nStore();
 
   useEffect(() => {
     loadFriendData();
@@ -45,32 +47,32 @@ function FriendsPanel() {
     <div className="space-y-5">
       {incomingRequests.length > 0 && (
         <section>
-          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Requests
+          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("friends.requests")}
           </h4>
           {incomingRequests.map((user) => (
             <div
               key={user._id}
-              className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-slate-800/70"
+              className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-surface/70"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar user={user} />
-                <span className="truncate text-sm text-slate-200">{user.fullName}</span>
+                <span className="truncate text-sm text-content">{user.fullName}</span>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
                   onClick={() => acceptRequest(user)}
-                  title="Accept"
-                  className="rounded-full bg-cyan-500/20 p-1.5 text-cyan-400 transition hover:bg-cyan-500/30"
+                  title={t("contacts.accept")}
+                  className="rounded-full bg-primary/20 p-1.5 text-primary transition hover:bg-primary/30"
                 >
                   <CheckIcon className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => declineRequest(user._id)}
-                  title="Decline"
-                  className="rounded-full bg-slate-700/60 p-1.5 text-slate-300 transition hover:bg-slate-700"
+                  title={t("friends.decline")}
+                  className="rounded-full bg-surface2/60 p-1.5 text-content transition hover:bg-surface2"
                 >
                   <XIcon className="h-4 w-4" />
                 </button>
@@ -82,24 +84,24 @@ function FriendsPanel() {
 
       {sentRequests.length > 0 && (
         <section>
-          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Pending
+          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("friends.pending")}
           </h4>
           {sentRequests.map((user) => (
             <div
               key={user._id}
-              className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-slate-800/70"
+              className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-surface/70"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar user={user} />
-                <span className="truncate text-sm text-slate-200">{user.fullName}</span>
+                <span className="truncate text-sm text-content">{user.fullName}</span>
               </div>
               <button
                 type="button"
                 onClick={() => cancelRequest(user._id)}
-                className="shrink-0 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-slate-700"
+                className="shrink-0 rounded-lg border border-edge px-2.5 py-1 text-xs text-content transition hover:bg-surface2"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           ))}
@@ -108,33 +110,33 @@ function FriendsPanel() {
 
       <section>
         {friends.length > 0 && (
-          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Friends
+          <h4 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("friends.friends")}
           </h4>
         )}
         {friends.map((user) => (
           <div
             key={user._id}
-            className="group flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-slate-800/70"
+            className="group flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-surface/70"
           >
             <div className="flex min-w-0 items-center gap-3">
               <Avatar user={user} />
-              <span className="truncate text-sm text-slate-200">{user.fullName}</span>
+              <span className="truncate text-sm text-content">{user.fullName}</span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => setSelectedUser(user)}
-                title="Message"
-                className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+                title={t("friends.message")}
+                className="rounded-full p-1.5 text-muted transition hover:bg-surface2 hover:text-content"
               >
                 <MessageSquareIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => unfriend(user._id)}
-                title="Remove friend"
-                className="rounded-full p-1.5 text-slate-500 opacity-0 transition hover:bg-slate-700 hover:text-rose-400 group-hover:opacity-100"
+                title={t("friends.remove")}
+                className="rounded-full p-1.5 text-muted opacity-0 transition hover:bg-surface2 hover:text-rose-400 group-hover:opacity-100"
               >
                 <UserMinusIcon className="h-4 w-4" />
               </button>
@@ -144,8 +146,8 @@ function FriendsPanel() {
       </section>
 
       {isEmpty && (
-        <p className="mt-6 text-center text-sm text-slate-400">
-          No friends yet. Add someone from the Contacts tab.
+        <p className="mt-6 text-center text-sm text-muted">
+          {t("friends.empty")}
         </p>
       )}
     </div>

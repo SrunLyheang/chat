@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useI18nStore } from "../store/useI18nStore";
 import { useNavigate } from "react-router-dom";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
-import { MessageCircleIcon, LockIcon, MailIcon, UserIcon, LoaderIcon } from "lucide-react";
+import { LotusMark, AngkorSilhouette, KbachDivider } from "../components/brand/KhmerMarks";
+import { LockIcon, MailIcon, UserIcon, LoaderIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
   const { signUp, isSigningUp, pendingUser } = useAuthStore();
+  const { t } = useI18nStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,22 +25,28 @@ function SignUpPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center p-4 bg-slate-900">
+    <div className="w-full min-h-screen flex items-center justify-center p-4 bg-ground">
       <div className="relative w-full max-w-md">
         <BorderAnimatedContainer>
-          <div className="w-full p-8">
+          <div className="relative w-full p-8 overflow-hidden">
+            {/* Angkor Wat watermark behind the heading */}
+            <AngkorSilhouette className="pointer-events-none absolute left-1/2 top-2 w-56 -translate-x-1/2 text-primary opacity-10" />
+
             {/* HEADING TEXT */}
-            <div className="text-center mb-8">
-              <MessageCircleIcon className="w-12 h-12 mx-auto text-slate-400 mb-4" />
-              <h2 className="text-2xl font-bold text-slate-200 mb-2">Create Account</h2>
-              <p className="text-slate-400">Sign up for a new account</p>
+            <div className="relative text-center mb-8">
+              <LotusMark className="w-14 h-12 mx-auto text-primary mb-3" />
+              <h2 className="font-display text-2xl font-bold text-content mb-1">
+                {t("app.name")}
+              </h2>
+              <h3 className="text-lg font-semibold text-primary">{t("auth.createAccount")}</h3>
+              <p className="text-muted text-sm mt-1">{t("auth.signupSubtitle")}</p>
             </div>
 
             {/* FORM */}
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* FULL NAME */}
               <div>
-                <label className="auth-input-label">Full Name</label>
+                <label className="auth-input-label">{t("auth.fullName")}</label>
                 <div className="relative">
                   <UserIcon className="auth-input-icon" />
                   <input
@@ -45,14 +54,14 @@ function SignUpPage() {
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     className="input"
-                    placeholder="Your full name"
+                    placeholder={t("auth.fullNamePlaceholder")}
                   />
                 </div>
               </div>
 
               {/* EMAIL INPUT */}
               <div>
-                <label className="auth-input-label">Email</label>
+                <label className="auth-input-label">{t("auth.email")}</label>
                 <div className="relative">
                   <MailIcon className="auth-input-icon" />
                   <input
@@ -60,14 +69,14 @@ function SignUpPage() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="input"
-                    placeholder="YourEmail@gmail.com"
+                    placeholder={t("auth.emailPlaceholder")}
                   />
                 </div>
               </div>
 
               {/* PASSWORD INPUT */}
               <div>
-                <label className="auth-input-label">Password</label>
+                <label className="auth-input-label">{t("auth.password")}</label>
                 <div className="relative">
                   <LockIcon className="auth-input-icon" />
                   <input
@@ -75,7 +84,7 @@ function SignUpPage() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="input"
-                    placeholder="Enter your password"
+                    placeholder={t("auth.passwordPlaceholder")}
                   />
                 </div>
               </div>
@@ -85,14 +94,16 @@ function SignUpPage() {
                 {isSigningUp ? (
                   <LoaderIcon className="w-full h-5 animate-spin text-center" />
                 ) : (
-                  "Create Account"
+                  t("auth.createAccount")
                 )}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
+            <KbachDivider className="mx-auto mt-6 h-4 w-40 text-primary/60" />
+
+            <div className="mt-4 text-center">
               <Link to="/login" className="auth-link">
-                Already have an account? Login
+                {t("auth.haveAccount")}
               </Link>
             </div>
           </div>

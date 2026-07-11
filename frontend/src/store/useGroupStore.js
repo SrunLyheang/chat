@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
+import { tr } from "./useI18nStore";
 import { useChatStore } from "./useChatStore";
 import { useAuthStore } from "./useAuthStore";
 
@@ -32,10 +33,10 @@ export const useGroupStore = create((set) => ({
       await chatStore.getMyChatPartners();
       chatStore.setSelectedUser(group);
       chatStore.setActiveTab("chats");
-      toast.success("Group created");
+      toast.success(tr("toast.groupCreated"));
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to create group");
+      toast.error(error.response?.data?.message || tr("toast.createGroupFailed"));
       return false;
     } finally {
       set({ isCreating: false });
@@ -53,7 +54,7 @@ export const useGroupStore = create((set) => ({
       chatStore.getMyChatPartners();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to rename group");
+      toast.error(error.response?.data?.message || tr("toast.renameGroupFailed"));
       return false;
     }
   },
@@ -69,10 +70,10 @@ export const useGroupStore = create((set) => ({
         chatStore.setSelectedUser(group);
       }
       chatStore.getMyChatPartners();
-      toast.success("Members added");
+      toast.success(tr("toast.membersAdded"));
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to add members");
+      toast.error(error.response?.data?.message || tr("toast.addMembersFailed"));
       return false;
     }
   },
@@ -90,7 +91,7 @@ export const useGroupStore = create((set) => ({
       chatStore.getMyChatPartners();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to remove member");
+      toast.error(error.response?.data?.message || tr("toast.removeMemberFailed"));
       return false;
     }
   },
@@ -104,10 +105,10 @@ export const useGroupStore = create((set) => ({
         chatStore.setSelectedUser(null);
       }
       chatStore.getMyChatPartners();
-      toast.success("You left the group");
+      toast.success(tr("toast.leftGroup"));
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to leave group");
+      toast.error(error.response?.data?.message || tr("toast.leaveGroupFailed"));
       return false;
     }
   },

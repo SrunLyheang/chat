@@ -7,28 +7,92 @@
   initial-value: 0deg;
   syntax: "<angle>";
 }
+
+/*
+  Theme tokens — every color in the app reads from these variables (via the
+  semantic Tailwind colors in tailwind.config.js: bg-surface, text-content,
+  border-edge, bg-primary, ...). Values are RGB triplets so Tailwind opacity
+  modifiers (bg-primary/20) keep working.
+
+  To add a NEW theme later: copy one block below under a new
+  [data-theme="your-name"] selector, tweak the values, and register it in the
+  THEMES list in src/store/useThemeStore.js. No component changes needed.
+*/
+:root,
+[data-theme="angkor-night"] {
+  /* Angkor Night — dark Khmer default: temple stone + gilded gold */
+  --ground: 23 19 16;
+  --surface: 36 28 21;
+  --surface-2: 46 35 24;
+  --edge: 61 47 31;
+  --content: 242 230 208;
+  --muted: 176 154 122;
+  --primary: 217 169 62;
+  --primary-strong: 200 145 43;
+  --accent: 178 60 38;
+  --on-primary: 30 22 10;
+  color-scheme: dark;
+}
+
+[data-theme="sandstone"] {
+  /* Sandstone Day — light Khmer: warm cream + deep gold */
+  --ground: 236 226 205;
+  --surface: 247 240 223;
+  --surface-2: 226 213 186;
+  --edge: 213 194 158;
+  --content: 42 32 24;
+  --muted: 122 106 82;
+  --primary: 176 122 24;
+  --primary-strong: 150 102 16;
+  --accent: 158 43 23;
+  --on-primary: 250 244 230;
+  color-scheme: light;
+}
+
+[data-theme="midnight"] {
+  /* Midnight — the original slate + cyan look, kept as an option */
+  --ground: 15 23 42;
+  --surface: 30 41 59;
+  --surface-2: 51 65 85;
+  --edge: 51 65 85;
+  --content: 226 232 240;
+  --muted: 148 163 184;
+  --primary: 34 211 238;
+  --primary-strong: 8 145 178;
+  --accent: 217 70 239;
+  --on-primary: 8 20 30;
+  color-scheme: dark;
+}
+
+body {
+  font-family: "Noto Sans Khmer", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: rgb(var(--ground));
+  color: rgb(var(--content));
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
 .input {
-  @apply w-full bg-slate-800/50 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent;
+  @apply w-full bg-surface/50 border border-edge rounded-lg py-2 pl-10 pr-4 text-content placeholder-muted focus:ring-2 focus:ring-primary focus:border-transparent;
 }
 
 .auth-input-icon {
-  @apply absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-5;
+  @apply absolute left-3 top-1/2 -translate-y-1/2 text-muted size-5;
 }
 
 .auth-input-label {
-  @apply block text-sm font-medium text-slate-300 mb-2;
+  @apply block text-sm font-medium text-content mb-2;
 }
 
 .auth-badge {
-  @apply inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-cyan-500/20 text-cyan-300;
+  @apply inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-primary/20 text-primary;
 }
 
 .auth-btn {
-  @apply w-full bg-cyan-500 text-white rounded-lg py-2.5 font-medium
-  hover:bg-cyan-600 focus:ring-2 focus:ring-cyan-500;
+  @apply w-full bg-primary text-onPrimary rounded-lg py-2.5 font-medium
+  hover:bg-primaryStrong focus:ring-2 focus:ring-primary;
 }
 
 .auth-link {
-  @apply px-4 py-2 inline-block bg-cyan-500/10 rounded-lg text-cyan-400
-  hover:text-cyan-500 text-sm transition-colors;
+  @apply px-4 py-2 inline-block bg-primary/10 rounded-lg text-primary
+  hover:text-primaryStrong text-sm transition-colors;
 }

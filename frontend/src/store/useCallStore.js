@@ -3,6 +3,7 @@ import { StreamVideoClient, CallingState } from "@stream-io/video-react-sdk";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
+import { tr } from "./useI18nStore";
 
 let clientPromise = null;
 let ringtoneAudio = null;
@@ -65,7 +66,7 @@ export const useCallStore = create((set, get) => ({
     if (activeCall || isCallActionPending || callPeerId) return;
     const { onlineUsers } = useAuthStore.getState();
     if (!onlineUsers.includes(otherUser._id)) {
-      toast.error(`${otherUser.fullName} is offline right now`);
+      toast.error(tr("toast.userOfflineNow", { name: otherUser.fullName }));
       return;
     }
     set({ isCallActionPending: true, callStatus: "connecting", callPeerId: otherUser._id });
@@ -83,7 +84,7 @@ export const useCallStore = create((set, get) => ({
       const socket = useAuthStore.getState().socket;
       socket?.emit("callUser", { receiverId: otherUser._id, callId, callerName: authUser.fullName });
     } catch (error) {
-      toast.error("Could not start the call");
+      toast.error(tr("toast.callStartFailed"));
       set({ isCallActionPending: false, callStatus: "idle", callPeerId: null });
       console.log("startCall error:", error);
     }
@@ -110,7 +111,7 @@ export const useCallStore = create((set, get) => ({
 
       set({ activeCall: call, incomingCall: null, callStatus: "connected" });
     } catch (error) {
-      toast.error("Could not join the call");
+      toast.error(tr("toast.callJoinFailed"));
       set({ isCallActionPending: false, callStatus: "idle", callPeerId: null });
       console.log("answerCall error:", error);
     }
