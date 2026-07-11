@@ -27,6 +27,7 @@ export const useChatStore = create((set, get) => ({
   allContacts: [],
   chats: [],
   messages: [],
+  blockedUsers: [],
   activeTab: "chats",
   selectedUser: null,
   replyingTo: null,
@@ -374,6 +375,50 @@ export const useChatStore = create((set, get) => ({
       }));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to pin chat");
+    }
+  },
+
+  getBlockedUsers: async () => {
+    try {
+      const res = await axiosInstance.get("/users/blocked");
+      set({ blockedUsers: res.data });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load blocked users");
+    }
+  },
+
+  // Block or unblock a user. On block we also strip them from the visible
+  // contacts/chat lists and close the chat if it's currently open, so the UI
+  // matches the server-side "hide from the blocker" behavior immediately.
+  toggleBlockUser: async (targetUser) => {
+    const targetId = toUserId(targetUser?._id);
+    if (!targetId) return;
+    try {
+      const res = await axiosInstance.put(`/users/${targetId}/block`);
+      const { isBlocked } = res.data;
+
+      set((state) => {
+        if (isBlocked) {
+          return {
+            allContacts: state.allContacts.filter((u) => toUserId(u._id) !== targetId),
+            chats: state.chats.filter((u) => toUserId(u._id) !== targetId),
+            blockedUsers: state.blockedUsers.some((u) => toUserId(u._id) === targetId)
+              ? state.blockedUsers
+              : [...state.blockedUsers, targetUser],
+            selectedUser:
+              toUserId(state.selectedUser?._id) === targetId ? null : state.selectedUser,
+          };
+        }
+        return {
+          blockedUsers: state.blockedUsers.filter((u) => toUserId(u._id) !== targetId),
+        };
+      });
+
+      toast.success(isBlocked ? "User blocked" : "User unblocked");
+      // Refresh contacts so an unblocked user reappears in the directory.
+      if (!isBlocked) get().getAllContacts();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update block status");
     }
   },
 

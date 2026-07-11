@@ -9,25 +9,30 @@ import {
   CheckIcon,
   PinIcon,
   PinOffIcon,
+  MoreVerticalIcon,
+  BanIcon,
 } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCallStore } from "../store/useCallStore";
 import toast from "react-hot-toast";
 
 function ChatHeader() {
-  const { selectedUser, setSelectedUser, isTyping, isBotThinking, setNickname, togglePinChat } =
+  const { selectedUser, setSelectedUser, isTyping, isBotThinking, setNickname, togglePinChat, toggleBlockUser } =
     useChatStore();
   const { onlineUsers } = useAuthStore();
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [prevSelectedUserId, setPrevSelectedUserId] = useState(selectedUser._id);
+  const menuRef = useRef(null);
 
-  // close any in-progress rename when switching chats
+  // close any in-progress rename / open menu when switching chats
   if (prevSelectedUserId !== selectedUser._id) {
     setPrevSelectedUserId(selectedUser._id);
     setIsEditingNickname(false);
+    setIsMenuOpen(false);
   }
 
   const isOnline = onlineUsers.includes(selectedUser._id);
@@ -52,6 +57,21 @@ function ChatHeader() {
 
     return () => window.removeEventListener("keydown", handleEscKey);
   }, [setSelectedUser, isEditingNickname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleBlockUser = () => {
+    setIsMenuOpen(false);
+    toggleBlockUser(selectedUser);
+  };
 
   const startNicknameEdit = () => {
     setNicknameDraft(selectedUser.nickname || "");
@@ -175,6 +195,32 @@ function ChatHeader() {
             <PinIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
           )}
         </button>
+
+        {!selectedUser.isBot && (
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              title="More options"
+              className="rounded-full p-2 transition hover:bg-slate-700/70"
+            >
+              <MoreVerticalIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleBlockUser}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-400 transition-colors hover:bg-slate-800"
+                >
+                  <BanIcon className="h-4 w-4" />
+                  Block user
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {!selectedUser.isBot && (
           <button

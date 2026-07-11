@@ -48,6 +48,21 @@ const userSchema = new mongoose.Schema(
             ref: "User",
             default: []
         },
+        // Users this account has blocked. Only affects the blocker's own view:
+        // blocked users are hidden from this user's contacts/chats/search and their
+        // realtime messages are not delivered here. The blocked user is unaffected.
+        blockedUsers: {
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: "User",
+            default: []
+        },
+        // Accepted friends (mutual). Denormalized on both users for fast lookup;
+        // the source of truth for pending/declined state is the FriendRequest collection.
+        friends: {
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: "User",
+            default: []
+        },
         isEmailVerified: {
             type: Boolean,
             default: false
