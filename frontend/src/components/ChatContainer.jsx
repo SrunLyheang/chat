@@ -150,7 +150,9 @@ function ChatContainer() {
 
     // clean up
     return () => unsubscribeFromMessages();
-  }, [selectedUser, getMessagesByUserId, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
+    // Depend on the id/isGroup primitives, not the selectedUser object: pin,
+    // nickname, and block updates replace the object and would refetch here.
+  }, [selectedUser._id, selectedUser.isGroup, getMessagesByUserId, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => () => {
     if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);

@@ -42,10 +42,18 @@ export const sendFriendRequest = async (req, res) => {
           return res.status(400).json({ message: "Friend request already sent." });
         }
         // They already sent ME a request — sending one back accepts it (mutual).
-        existing.status = "accepted";
-        await existing.save();
-        await User.updateOne({ _id: myId }, { $addToSet: { friends: targetId } });
-        await User.updateOne({ _id: targetId }, { $addToSet: { friends: myId } });
+        // Transaction keeps the request status and both friends arrays in sync.
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            existing.status = "accepted";
+            await existing.save({ session });
+            await User.updateOne({ _id: myId }, { $addToSet: { friends: targetId } }, { session });
+            await User.updateOne({ _id: targetId }, { $addToSet: { friends: myId } }, { session });
+          });
+        } finally {
+          session.endSession();
+        }
         return res.status(200).json({ status: "accepted", request: existing });
       }
       // Previously declined — reopen as a fresh pending request from me.
@@ -58,6 +66,10 @@ export const sendFriendRequest = async (req, res) => {
     const request = await FriendRequest.create({ ...pair, requestedBy: myId, status: "pending" });
     res.status(201).json({ status: "pending", request });
   } catch (error) {
+    // Unique (userA, userB) index: a concurrent request already created the pair.
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "A friend request between you two already exists." });
+    }
     console.log("Error in sendFriendRequest controller : ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -80,10 +92,18 @@ export const acceptFriendRequest = async (req, res) => {
       return res.status(404).json({ message: "No pending request from this user." });
     }
 
-    request.status = "accepted";
-    await request.save();
-    await User.updateOne({ _id: myId }, { $addToSet: { friends: requesterId } });
-    await User.updateOne({ _id: requesterId }, { $addToSet: { friends: myId } });
+    // Transaction keeps the request status and both friends arrays in sync.
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        request.status = "accepted";
+        await request.save({ session });
+        await User.updateOne({ _id: myId }, { $addToSet: { friends: requesterId } }, { session });
+        await User.updateOne({ _id: requesterId }, { $addToSet: { friends: myId } }, { session });
+      });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({ userId: requesterId, status: "accepted" });
   } catch (error) {
@@ -154,9 +174,17 @@ export const unfriend = async (req, res) => {
       return res.status(400).json({ message: "Invalid user." });
     }
 
-    await User.updateOne({ _id: myId }, { $pull: { friends: targetId } });
-    await User.updateOne({ _id: targetId }, { $pull: { friends: myId } });
-    await FriendRequest.deleteOne(orderPair(myId, targetId));
+    // Transaction: both sides of the friendship and the pair record go together.
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await User.updateOne({ _id: myId }, { $pull: { friends: targetId } }, { session });
+        await User.updateOne({ _id: targetId }, { $pull: { friends: myId } }, { session });
+        await FriendRequest.deleteOne(orderPair(myId, targetId), { session });
+      });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({ userId: targetId, status: "removed" });
   } catch (error) {
@@ -168,7 +196,10 @@ export const unfriend = async (req, res) => {
 // My accepted friends (read from the denormalized array).
 export const getFriends = async (req, res) => {
   try {
-    const friends = await User.find({ _id: { $in: req.user.friends || [] } }).select("-password");
+    // Exclude anyone I've blocked — they shouldn't resurface in the Friends tab.
+    const friends = await User.find({
+      _id: { $in: req.user.friends || [], $nin: req.user.blockedUsers || [] },
+    }).select("-password");
     res.status(200).json(friends);
   } catch (error) {
     console.log("Error in getFriends controller : ", error.message);

@@ -3,6 +3,7 @@ import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import useAuthStore from './useAuthStore';
 import { tr } from "./useI18nStore";
+import { useFriendStore } from './useFriendStore';
 
 
 const sortMessages = (msgs) =>
@@ -481,9 +482,12 @@ export const useChatStore = create((set, get) => ({
 
       set((state) => {
         if (isBlocked) {
+          const remainingUnreadChats = { ...state.unreadChats };
+          delete remainingUnreadChats[targetId];
           return {
             allContacts: state.allContacts.filter((u) => toUserId(u._id) !== targetId),
             chats: state.chats.filter((u) => toUserId(u._id) !== targetId),
+            unreadChats: remainingUnreadChats,
             blockedUsers: state.blockedUsers.some((u) => toUserId(u._id) === targetId)
               ? state.blockedUsers
               : [...state.blockedUsers, targetUser],
@@ -497,6 +501,17 @@ export const useChatStore = create((set, get) => ({
       });
 
       toast.success(isBlocked ? tr("toast.userBlocked") : tr("toast.userUnblocked"));
+      if (isBlocked) {
+        // Mirror the server-side cleanup: blocking ends the friendship and any
+        // pending requests, so prune the Friends tab lists immediately too.
+        useFriendStore.setState((state) => ({
+          friends: state.friends.filter((u) => toUserId(u._id) !== targetId),
+          incomingRequests: state.incomingRequests.filter((u) => toUserId(u._id) !== targetId),
+          sentRequests: state.sentRequests.filter((u) => toUserId(u._id) !== targetId),
+        }));
+      }
+
+      toast.success(isBlocked ? "User blocked" : "User unblocked");
       // Refresh contacts so an unblocked user reappears in the directory.
       if (!isBlocked) get().getAllContacts();
     } catch (error) {
