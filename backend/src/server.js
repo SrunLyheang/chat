@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import userRoutes from "./routes/user.route.js";
 import friendRoutes from "./routes/friend.route.js";
+import conversationRoutes from "./routes/conversation.route.js";
 import { connectDB } from "../lib/db.js";
 import cors from "cors"
 import { app, server } from "../lib/socket.js";
@@ -28,6 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/friends", friendRoutes);
+app.use("/api/conversations", conversationRoutes);
 app.use("/api/stream", streamRoutes);
 
 // Make ready for deployment

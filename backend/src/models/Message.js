@@ -7,10 +7,19 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // For 1:1 messages. Required only when the message is not part of a group
+    // conversation, so the existing direct-message path is unchanged.
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: function () {
+        return !this.conversationId;
+      },
+    },
+    // Set for group messages; absent for 1:1 messages.
+    conversationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
     },
     text: {
       type: String,
@@ -74,6 +83,8 @@ const messageSchema = new mongoose.Schema(
 // optimize frequent queries
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
 messageSchema.index({ receiverId: 1, senderId: 1, createdAt: -1 });
+// group messages are fetched by conversation, ordered by time
+messageSchema.index({ conversationId: 1, createdAt: 1 });
 // require at least one of text and image (unless the message was deleted)
 messageSchema.pre("validate", function (next) {
   if (!this.isDeleted && !this.text && !this.image) {

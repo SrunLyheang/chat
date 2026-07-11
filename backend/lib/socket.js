@@ -4,6 +4,7 @@ import express from "express";
 import { ENV } from "./env.js";
 
 import { socketAuthMiddleware } from "../src/middleware/socket.auth.middleware.js";
+import Conversation from "../src/models/Conversation.js";
 
 
 const app = express();
@@ -36,6 +37,26 @@ io.on("connection", (socket) => {
 
   // io.emit() is used to send events to all connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // Join a Socket.IO room per group this user belongs to, so group messages
+  // can be delivered with io.to(conversationId).emit(...). Unlike the 1:1
+  // userSocketMap (one socket per user), each socket joins rooms independently.
+  Conversation.find({ participants: userId })
+    .select("_id")
+    .then((conversations) => {
+      conversations.forEach((conv) => socket.join(conv._id.toString()));
+    })
+    .catch((error) => console.log("Error joining conversation rooms:", error.message));
+
+  // When a user is added to a new group (or creates one) while already
+  // connected, the client asks to join that room without reconnecting.
+  socket.on("joinConversation", ({ conversationId }) => {
+    if (conversationId) socket.join(conversationId.toString());
+  });
+
+  socket.on("leaveConversation", ({ conversationId }) => {
+    if (conversationId) socket.leave(conversationId.toString());
+  });
 
   // with socket.on we listen for events from clients
   socket.on("typing", ({ receiverId }) => {
