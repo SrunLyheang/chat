@@ -43,7 +43,10 @@ function ChatsList() {
     getMyChatPartners();
   }, [getMyChatPartners]);
 
-  if (isUserLoading) return <UsersLoadingSkeleton />;
+  // Don't early-return while the create-group modal is open: it lives in this
+  // component's tree, and its own contacts fetch toggles isUserLoading — the
+  // skeleton would unmount it, and remounting refetches in an infinite loop.
+  if (isUserLoading && !isCreateOpen) return <UsersLoadingSkeleton />;
 
   const pinnedChats = chats.filter((chat) => chat.isPinnedChat);
   const otherChats = chats.filter((chat) => !chat.isPinnedChat);
