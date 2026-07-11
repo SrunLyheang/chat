@@ -43,8 +43,8 @@ export async function generateReply(model, userMessage, history = [], attempt = 
       errorMessage.toLowerCase().includes("timeout");
     const isRateLimited = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
 
-    if ((isOverloaded || isTimeout) && attempt < 3) {
-      console.log(`Gemini ${isTimeout ? "timed out" : "overloaded"}, retrying (attempt ${attempt + 1})...`);
+    if (isOverloaded && attempt < 3) {
+      console.log(`Gemini overloaded, retrying (attempt ${attempt + 1})...`);
       await sleep(attempt * 1000); // wait 1s, then 2s
       return generateReply(model, userMessage, history, attempt + 1);
     }

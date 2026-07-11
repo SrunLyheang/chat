@@ -306,7 +306,16 @@ export const useAuthStore = create((set, get) => ({
         (t) => (
           <div
             onClick={() => {
-              if (group) chatStore.setSelectedUser(group);
+              // Fall back to a minimal group object so the click still opens
+              // the conversation before the chat list has refreshed.
+              chatStore.setSelectedUser(
+                group || {
+                  _id: message.conversationId,
+                  isGroup: true,
+                  fullName: groupName,
+                  participants: [],
+                }
+              );
               chatStore.setActiveTab("chats");
               toast.dismiss(t.id);
             }}

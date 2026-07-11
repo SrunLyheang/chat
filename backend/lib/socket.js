@@ -50,8 +50,17 @@ io.on("connection", (socket) => {
 
   // When a user is added to a new group (or creates one) while already
   // connected, the client asks to join that room without reconnecting.
-  socket.on("joinConversation", ({ conversationId }) => {
-    if (conversationId) socket.join(conversationId.toString());
+  socket.on("joinConversation", async ({ conversationId }) => {
+    if (!conversationId) return;
+    try {
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+      }).select("_id");
+      if (conversation) socket.join(conversationId.toString());
+    } catch (error) {
+      console.log("Error validating conversation membership:", error.message);
+    }
   });
 
   socket.on("leaveConversation", ({ conversationId }) => {

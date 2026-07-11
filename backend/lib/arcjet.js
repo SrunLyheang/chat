@@ -15,7 +15,10 @@ const aj = arcjet({
             ],
         }),
         slidingWindow({
-            mode: "LIVE",
+            // LIVE in production so traffic spikes can't hammer the free-tier MongoDB;
+            // DRY_RUN in dev because all local requests share one IP bucket and
+            // normal clicking around trips the limit, 429-ing every API call.
+            mode: ENV.NODE_ENV === "production" ? "LIVE" : "DRY_RUN",
             max: 100,
             interval: 60,
         }),

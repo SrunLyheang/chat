@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
+import FriendRequest, { orderPair } from "../models/FriendRequest.js";
 
 // Toggle whether the logged-in user has blocked another user.
 // Blocking is one-directional and only affects the blocker's own view:
@@ -30,8 +31,16 @@ export const toggleBlock = async (req, res) => {
       { _id: myId },
       isCurrentlyBlocked
         ? { $pull: { blockedUsers: targetId } }
-        : { $addToSet: { blockedUsers: targetId } }
+        : { $addToSet: { blockedUsers: targetId }, $pull: { friends: targetId } }
     );
+
+    if (!isCurrentlyBlocked) {
+      // Blocking also ends the friendship on the target's side and clears the
+      // pair's request record so neither a stale friendship nor a pending
+      // request survives the block. Unblocking deliberately restores neither.
+      await User.updateOne({ _id: targetId }, { $pull: { friends: myId } });
+      await FriendRequest.deleteOne(orderPair(myId, targetId));
+    }
 
     res.status(200).json({ userId: targetId, isBlocked: !isCurrentlyBlocked });
   } catch (error) {
