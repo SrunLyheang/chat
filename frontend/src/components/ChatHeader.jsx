@@ -9,27 +9,38 @@ import {
   CheckIcon,
   PinIcon,
   PinOffIcon,
+  MoreVerticalIcon,
+  BanIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCallStore } from "../store/useCallStore";
 import toast from "react-hot-toast";
+import GroupInfoModal from "./GroupInfoModal";
 
 function ChatHeader() {
-  const { selectedUser, setSelectedUser, isTyping, isBotThinking, setNickname, togglePinChat } =
+  const { selectedUser, setSelectedUser, isTyping, isBotThinking, setNickname, togglePinChat, toggleBlockUser } =
     useChatStore();
   const { onlineUsers } = useAuthStore();
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
   const [prevSelectedUserId, setPrevSelectedUserId] = useState(selectedUser._id);
+  const menuRef = useRef(null);
 
-  // close any in-progress rename when switching chats
+  // close any in-progress rename / open menu when switching chats
   if (prevSelectedUserId !== selectedUser._id) {
     setPrevSelectedUserId(selectedUser._id);
     setIsEditingNickname(false);
+    setIsMenuOpen(false);
+    setIsGroupInfoOpen(false);
   }
 
+  const isGroup = !!selectedUser.isGroup;
+  const memberCount = selectedUser.participants?.length || 0;
   const isOnline = onlineUsers.includes(selectedUser._id);
   const displayName = selectedUser.nickname?.trim() || selectedUser.fullName;
   const hasNickname = Boolean(selectedUser.nickname?.trim());
@@ -53,6 +64,21 @@ function ChatHeader() {
     return () => window.removeEventListener("keydown", handleEscKey);
   }, [setSelectedUser, isEditingNickname]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleBlockUser = () => {
+    setIsMenuOpen(false);
+    toggleBlockUser(selectedUser);
+  };
+
   const startNicknameEdit = () => {
     setNicknameDraft(selectedUser.nickname || "");
     setIsEditingNickname(true);
@@ -70,11 +96,15 @@ function ChatHeader() {
       {/* Left Side */}
       <div className="flex items-center space-x-3 min-w-0">
         <div
-          className={`avatar ${selectedUser.isBot || isOnline ? "online" : "offline"
+          className={`avatar ${!isGroup && (selectedUser.isBot || isOnline) ? "online" : "offline"
             }`}
         >
           <div className="w-10 rounded-full">
-            {selectedUser.isBot ? (
+            {isGroup ? (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+                <UsersIcon className="w-5 h-5 text-white" />
+              </div>
+            ) : selectedUser.isBot ? (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                 <BotIcon className="w-5 h-5 text-white" />
               </div>
@@ -87,6 +117,19 @@ function ChatHeader() {
           </div>
         </div>
 
+        {isGroup ? (
+          <button
+            type="button"
+            onClick={() => setIsGroupInfoOpen(true)}
+            className="min-w-0 text-left"
+            title="Group info"
+          >
+            <h3 className="truncate text-sm text-slate-200 font-medium">{selectedUser.fullName}</h3>
+            <p className="text-slate-400 text-xs truncate">
+              {memberCount} {memberCount === 1 ? "member" : "members"}
+            </p>
+          </button>
+        ) : (
         <div className="min-w-0">
           {isEditingNickname ? (
             <div className="flex items-center gap-1.5">
@@ -159,10 +202,23 @@ function ChatHeader() {
             )}
           </p>
         </div>
+        )}
       </div>
 
       {/* Right Side */}
       <div className="flex items-center gap-2">
+        {isGroup && (
+          <button
+            type="button"
+            onClick={() => setIsGroupInfoOpen(true)}
+            title="Group info"
+            className="rounded-full p-2 transition hover:bg-slate-700/70"
+          >
+            <UsersIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+          </button>
+        )}
+
+        {!isGroup && (
         <button
           type="button"
           onClick={() => togglePinChat(selectedUser._id)}
@@ -175,8 +231,35 @@ function ChatHeader() {
             <PinIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
           )}
         </button>
+        )}
 
-        {!selectedUser.isBot && (
+        {!isGroup && !selectedUser.isBot && (
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              title="More options"
+              className="rounded-full p-2 transition hover:bg-slate-700/70"
+            >
+              <MoreVerticalIcon className="h-5 w-5 text-slate-400 hover:text-slate-200" />
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-lg border border-slate-700/50 bg-slate-900 shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleBlockUser}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-400 transition-colors hover:bg-slate-800"
+                >
+                  <BanIcon className="h-4 w-4" />
+                  Block user
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isGroup && !selectedUser.isBot && (
           <button
             type="button"
             onClick={() => {
@@ -229,6 +312,10 @@ function ChatHeader() {
           <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors" />
         </button>
       </div>
+
+      {isGroup && isGroupInfoOpen && (
+        <GroupInfoModal group={selectedUser} onClose={() => setIsGroupInfoOpen(false)} />
+      )}
     </div>
   );
 }

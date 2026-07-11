@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon, BotIcon, ChevronDownIcon } from "lucide-react";
+import { LoaderIcon, LogOutIcon, VolumeOffIcon, Volume2Icon, BotIcon, ChevronDownIcon, ShieldBanIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import BlockedUsersModal from "./BlockedUsersModal";
 
 const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
@@ -10,6 +11,7 @@ function ProfileHeader() {
   const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser } = useChatStore();
   const [selectedImg, setSelectedImg] = useState(null);
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
+  const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const botMenuRef = useRef(null);
@@ -131,6 +133,15 @@ function ProfileHeader() {
             </div>
           )}
 
+          {/* BLOCKED USERS BTN */}
+          <button
+            className="text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={() => setIsBlockedModalOpen(true)}
+            title="Blocked users"
+          >
+            <ShieldBanIcon className="size-5" />
+          </button>
+
           {/* LOGOUT BTN */}
           <button
             className="text-slate-400 hover:text-slate-200 transition-colors"
@@ -156,6 +167,10 @@ function ProfileHeader() {
           </button>
         </div>
       </div>
+
+      {isBlockedModalOpen && (
+        <BlockedUsersModal onClose={() => setIsBlockedModalOpen(false)} />
+      )}
     </div>
   );
 }
