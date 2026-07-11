@@ -22,6 +22,9 @@ function BlockedUsersModal({ onClose }) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="blocked-users-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
@@ -30,9 +33,12 @@ function BlockedUsersModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-700/50 px-5 py-4">
-          <h3 className="text-slate-200 font-medium">Blocked users</h3>
+          <h3 id="blocked-users-title" className="text-slate-200 font-medium">
+            Blocked users
+          </h3>
           <button
             type="button"
+            aria-label="Close blocked users"
             onClick={onClose}
             className="text-slate-400 transition-colors hover:text-slate-200"
           >
