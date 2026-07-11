@@ -3,7 +3,19 @@ import { uploadImage } from "../../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import Conversation from "../models/Conversation.js";
 import { getBotReply } from "../../lib/ai/index.js";
+
+// Deliver a message-related event to the right audience: a group's room for
+// group messages, or the single other participant's socket for 1:1 messages.
+const emitToMessageAudience = (message, event, payload) => {
+  if (message.conversationId) {
+    io.to(message.conversationId.toString()).emit(event, payload);
+    return;
+  }
+  const receiverSocketId = getReceiverSocketId(message.receiverId);
+  if (receiverSocketId) io.to(receiverSocketId).emit(event, payload);
+};
 
 const getPreviewText = (message, currentUserId) => {
   if (!message) return "";
@@ -271,10 +283,7 @@ export const editMessage = async (req, res) => {
     message.isEdited = true;
     await message.save();
 
-    const receiverSocketId = getReceiverSocketId(message.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageEdited", message);
-    }
+    emitToMessageAudience(message, "messageEdited", message);
 
     res.status(200).json(message);
   } catch (error) {
@@ -319,13 +328,10 @@ export const deleteMessage = async (req, res) => {
       })
     );
 
-    const receiverSocketId = getReceiverSocketId(message.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageDeleted", message);
-      updatedReplyMessages.forEach((updatedReplyMessage) => {
-        io.to(receiverSocketId).emit("messageEdited", updatedReplyMessage);
-      });
-    }
+    emitToMessageAudience(message, "messageDeleted", message);
+    updatedReplyMessages.forEach((updatedReplyMessage) => {
+      emitToMessageAudience(updatedReplyMessage, "messageEdited", updatedReplyMessage);
+    });
 
     res.status(200).json({
       deletedMessages: [message],
@@ -346,7 +352,14 @@ export const togglePinMessage = async (req, res) => {
     if (!message) {
       return res.status(404).json({ message: "Message not found." });
     }
-    if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
+    // Group message: any member may pin. 1:1 message: only the two participants.
+    if (message.conversationId) {
+      const conversation = await Conversation.findById(message.conversationId).select("participants");
+      const isMember = conversation?.participants?.some((id) => id.equals(myId));
+      if (!isMember) {
+        return res.status(403).json({ message: "You can only pin messages in your own chats." });
+      }
+    } else if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
       return res.status(403).json({ message: "You can only pin messages in your own chats." });
     }
     if (message.isDeleted) {
@@ -358,12 +371,8 @@ export const togglePinMessage = async (req, res) => {
     message.pinnedBy = message.isPinned ? myId : undefined;
     await message.save();
 
-    // let the other participant's open chat reflect the pin in real time
-    const otherUserId = message.senderId.equals(myId) ? message.receiverId : message.senderId;
-    const otherSocketId = getReceiverSocketId(otherUserId);
-    if (otherSocketId) {
-      io.to(otherSocketId).emit("messagePinned", message);
-    }
+    // let the other participant(s)' open chat reflect the pin in real time
+    emitToMessageAudience(message, "messagePinned", message);
 
     res.status(200).json(message);
   } catch (error) {
@@ -446,7 +455,11 @@ export const getChatPartners = async (req, res) => {
     // Partners the viewer has blocked should not appear in their chat list.
     const blockedIdSet = new Set((req.user.blockedUsers || []).map((id) => id.toString()));
 
+    // Only 1:1 messages here — group messages (which have conversationId and no
+    // receiverId) are handled separately below and would otherwise break the
+    // sender/receiver pairing loop. `conversationId: null` matches missing too.
     const messages = await Message.find({
+      conversationId: null,
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
     }).sort({ createdAt: -1 });
 
@@ -493,7 +506,45 @@ export const getChatPartners = async (req, res) => {
       })
       .filter(Boolean);
 
-    res.status(200).json(response);
+    // Merge in the viewer's group conversations so the frontend gets a single
+    // recency-sorted list instead of having to interleave two sources itself.
+    const groups = await Conversation.find({ participants: loggedInUserId })
+      .populate("participants", "fullName profilePic isBot");
+
+    const groupRows = await Promise.all(
+      groups.map(async (group) => {
+        const lastMessage = await Message.findOne({ conversationId: group._id }).sort({ createdAt: -1 });
+        return {
+          _id: group._id,
+          isGroup: true,
+          fullName: group.name,
+          groupAvatar: group.avatar,
+          participants: group.participants,
+          admins: group.admins,
+          createdBy: group.createdBy,
+          lastMessage: lastMessage
+            ? {
+              _id: lastMessage._id,
+              text: lastMessage.text,
+              image: lastMessage.image,
+              senderId: lastMessage.senderId,
+              createdAt: lastMessage.createdAt,
+              isDeleted: lastMessage.isDeleted,
+            }
+            : null,
+          lastMessagePreview: lastMessage
+            ? getPreviewText(lastMessage, loggedInUserId)
+            : "No messages yet",
+          lastMessageAt: lastMessage ? lastMessage.createdAt : group.updatedAt,
+        };
+      })
+    );
+
+    const combined = [...response, ...groupRows].sort(
+      (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+    );
+
+    res.status(200).json(combined);
   } catch (error) {
     console.log("Error in getChatPartners controller : ", error.message);
     res.status(500).json({ error: "Internal server error" });

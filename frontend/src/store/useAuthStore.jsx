@@ -3,7 +3,7 @@ import { axiosInstance } from "../lib/axios"
 import { toast } from 'react-hot-toast'
 import { io } from "socket.io-client"
 import { useChatStore } from "./useChatStore"
-import { BotIcon } from "lucide-react"
+import { BotIcon, UsersIcon } from "lucide-react"
 
 const toUserId = (value) => (value ? value.toString() : "");
 
@@ -268,6 +268,90 @@ export const useAuthStore = create((set, get) => ({
         { duration: 4000 }
       );
     })
+
+    // --- Group chat events ---
+    socket.on("newGroupMessage", (message) => {
+      const chatStore = useChatStore.getState();
+      const authUserId = toUserId(get().authUser?._id);
+      const isMine = toUserId(message.senderId) === authUserId;
+      const isOpen =
+        chatStore.selectedUser?.isGroup &&
+        toUserId(chatStore.selectedUser._id) === toUserId(message.conversationId);
+
+      if (isOpen) {
+        if (!isMine) chatStore.appendGroupMessage(message);
+        chatStore.promoteGroupForMessage(message, { shouldIncrementUnread: false });
+        return;
+      }
+
+      chatStore.promoteGroupForMessage(message, { shouldIncrementUnread: !isMine });
+      if (isMine) return;
+
+      const group = chatStore.chats.find(
+        (c) => c.isGroup && toUserId(c._id) === toUserId(message.conversationId)
+      );
+      const sender = group?.participants?.find(
+        (p) => toUserId(p._id) === toUserId(message.senderId)
+      );
+      const groupName = group?.fullName || "Group";
+      const preview = message.image ? "📷 Photo" : message.text || "New message";
+
+      if (chatStore.isSoundEnabled) {
+        const notificationSound = new Audio("/sounds/notification.mp3");
+        notificationSound.currentTime = 0;
+        notificationSound.play().catch((e) => console.log("Audio play failed:", e));
+      }
+
+      toast.custom(
+        (t) => (
+          <div
+            onClick={() => {
+              if (group) chatStore.setSelectedUser(group);
+              chatStore.setActiveTab("chats");
+              toast.dismiss(t.id);
+            }}
+            className="max-w-sm w-full bg-slate-800 border border-slate-700/70 shadow-lg rounded-xl pointer-events-auto flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/80 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center flex-shrink-0">
+              <UsersIcon className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-100 font-medium text-sm truncate">{groupName}</p>
+              <p className="text-slate-400 text-xs truncate">
+                {sender ? `${sender.fullName}: ${preview}` : preview}
+              </p>
+            </div>
+          </div>
+        ),
+        { duration: 4000 }
+      );
+    });
+
+    socket.on("addedToGroup", () => {
+      useChatStore.getState().getMyChatPartners();
+    });
+
+    socket.on("groupUpdated", (conversation) => {
+      const chatStore = useChatStore.getState();
+      chatStore.getMyChatPartners();
+      if (
+        chatStore.selectedUser?.isGroup &&
+        toUserId(chatStore.selectedUser._id) === toUserId(conversation._id)
+      ) {
+        import("./useGroupStore").then(({ toGroupSelected }) => {
+          useChatStore.getState().setSelectedUser(toGroupSelected(conversation));
+        });
+      }
+    });
+
+    socket.on("removedFromGroup", ({ conversationId }) => {
+      const chatStore = useChatStore.getState();
+      if (toUserId(chatStore.selectedUser?._id) === toUserId(conversationId)) {
+        chatStore.setSelectedUser(null);
+      }
+      chatStore.getMyChatPartners();
+      toast("You were removed from a group.", { icon: "👋" });
+    });
   },
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect()

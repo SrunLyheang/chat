@@ -156,9 +156,81 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  getGroupMessages: async (conversationId) => {
+    set({ isMessagesLoading: true });
+    try {
+      const res = await axiosInstance.get(`/conversations/${conversationId}/messages`);
+      set({ messages: sortMessages(res.data) });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    } finally {
+      set({ isMessagesLoading: false });
+    }
+  },
+
+  // Append a realtime group message to the open conversation, deduping by _id
+  // (the sender already has their own copy from the optimistic update).
+  appendGroupMessage: (message) => {
+    const { messages, selectedUser } = get();
+    if (!selectedUser?.isGroup) return;
+    if (toUserId(message.conversationId) !== toUserId(selectedUser._id)) return;
+    if (messages.some((m) => m._id === message._id)) return;
+    set({ messages: sortMessages([...messages, message]) });
+  },
+
+  // Move a group to the top of the chat list with an updated preview / unread
+  // badge. If we don't have the group locally yet, refresh the whole list.
+  promoteGroupForMessage: (message, options = {}) => {
+    const { authUser } = useAuthStore.getState();
+    const authUserId = toUserId(authUser?._id);
+    const conversationId = toUserId(message.conversationId);
+    const existing = get().chats.find(
+      (chat) => chat.isGroup && toUserId(chat._id) === conversationId
+    );
+
+    if (!existing) {
+      // Brand-new group we haven't loaded — pull the fresh list.
+      get().getMyChatPartners();
+      return;
+    }
+
+    const isIncoming = toUserId(message.senderId) !== authUserId;
+    const shouldIncrementUnread = (options.shouldIncrementUnread ?? true) && isIncoming;
+    const preview = message.image ? "📷 Photo" : message.text || "New message";
+
+    set((state) => {
+      const currentUnread = state.unreadChats[conversationId];
+      const updatedChat = {
+        ...existing,
+        lastMessage: {
+          _id: message._id,
+          text: message.text,
+          image: message.image,
+          senderId: message.senderId,
+          createdAt: message.createdAt,
+          isDeleted: message.isDeleted,
+        },
+        lastMessagePreview: toUserId(message.senderId) === authUserId ? `You: ${message.text || "📷 Photo"}` : preview,
+        lastMessageAt: message.createdAt,
+      };
+      const otherChats = state.chats.filter((chat) => toUserId(chat._id) !== conversationId);
+
+      return {
+        chats: [updatedChat, ...otherChats],
+        unreadChats: shouldIncrementUnread
+          ? {
+            ...state.unreadChats,
+            [conversationId]: { count: (currentUnread?.count || 0) + 1, preview },
+          }
+          : state.unreadChats,
+      };
+    });
+  },
+
   sendMessage: async (messageData) => {
     const { selectedUser, messages, replyingTo } = get();
     const { authUser } = useAuthStore.getState();
+    const isGroup = !!selectedUser.isGroup;
     const tempId = `temp-${Date.now()}`;
     const replySnapshot = replyingTo
       ? {
@@ -173,7 +245,8 @@ export const useChatStore = create((set, get) => ({
     const optimisticMessage = {
       _id: tempId,
       senderId: authUser._id,
-      receiverId: selectedUser._id,
+      // group messages carry conversationId; 1:1 messages carry receiverId
+      ...(isGroup ? { conversationId: selectedUser._id } : { receiverId: selectedUser._id }),
       text: messageData.text,
       image: messageData.image,
       replyTo: replySnapshot,
@@ -183,24 +256,32 @@ export const useChatStore = create((set, get) => ({
 
     // Immediately update the UI with the optimistic message
     set({ messages: sortMessages([...messages, optimisticMessage]), replyingTo: null });
-    if (selectedUser.isBot && messageData.text) {
+    if (!isGroup && selectedUser.isBot && messageData.text) {
       set({ isBotThinking: true });
     }
 
+    const endpoint = isGroup
+      ? `/conversations/${selectedUser._id}/messages`
+      : `/messages/send/${selectedUser._id}`;
+
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
+      const res = await axiosInstance.post(endpoint, {
         ...messageData,
         replyTo: replySnapshot ? { messageId: replySnapshot.messageId } : undefined,
       });
 
-      // Fixed: Replace the temporary optimistic message with the actual saved message from the backend
+      // Replace the temporary optimistic message with the saved message
       set({
         messages: sortMessages(
           get().messages.map((msg) => msg._id === tempId ? res.data : msg)
         ),
       });
 
-      get().promoteChatForMessage(res.data, selectedUser, { shouldIncrementUnread: false });
+      if (isGroup) {
+        get().promoteGroupForMessage(res.data, { shouldIncrementUnread: false });
+      } else {
+        get().promoteChatForMessage(res.data, selectedUser, { shouldIncrementUnread: false });
+      }
     } catch (error) {
       set({ messages: messages, replyingTo, isBotThinking: false });
       toast.error(error.response?.data?.message || "Something went wrong");

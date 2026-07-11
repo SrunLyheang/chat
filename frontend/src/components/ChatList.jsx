@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import NoChatsFound from "./NoChatsFound";
 import { useAuthStore } from "../store/useAuthStore";
-import { Eye, EyeOff, BotIcon, Pin } from "lucide-react";
+import { Eye, EyeOff, BotIcon, Pin, UsersIcon, PlusIcon } from "lucide-react";
+import CreateGroupModal from "./CreateGroupModal";
 
 const formatChatTime = (date) => {
   if (!date) return "";
@@ -36,13 +37,13 @@ function ChatsList() {
     toggleIncomingMessagePreview,
   } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   useEffect(() => {
     getMyChatPartners();
   }, [getMyChatPartners]);
 
   if (isUserLoading) return <UsersLoadingSkeleton />;
-  if (chats.length === 0) return <NoChatsFound />;
 
   const pinnedChats = chats.filter((chat) => chat.isPinnedChat);
   const otherChats = chats.filter((chat) => !chat.isPinnedChat);
@@ -66,9 +67,13 @@ function ChatsList() {
       >
         <div className="flex items-center gap-3">
           {/* This will be paired with socket */}
-          <div className={`avatar ${chat.isBot || onlineUsers.includes(chat._id) ? "online" : ""}`}>
+          <div className={`avatar ${!chat.isGroup && (chat.isBot || onlineUsers.includes(chat._id)) ? "online" : ""}`}>
             <div className="size-12 rounded-full">
-              {chat.isBot ? (
+              {chat.isGroup ? (
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+                  <UsersIcon className="w-6 h-6 text-white" />
+                </div>
+              ) : chat.isBot ? (
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                   <BotIcon className="w-6 h-6 text-white" />
                 </div>
@@ -113,6 +118,14 @@ function ChatsList() {
     <>
       <button
         type="button"
+        onClick={() => setIsCreateOpen(true)}
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-2 text-sm font-medium text-fuchsia-300 transition hover:bg-fuchsia-500/20"
+      >
+        <PlusIcon className="h-4 w-4" /> New group
+      </button>
+
+      <button
+        type="button"
         onClick={toggleIncomingMessagePreview}
         className="mb-3 flex w-full items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/50"
       >
@@ -123,6 +136,8 @@ function ChatsList() {
           <EyeOff className="h-4 w-4 text-slate-400" />
         )}
       </button>
+
+      {chats.length === 0 && <NoChatsFound />}
 
       {pinnedChats.length > 0 && (
         <>
@@ -139,6 +154,8 @@ function ChatsList() {
       )}
 
       {otherChats.map(renderChat)}
+
+      {isCreateOpen && <CreateGroupModal onClose={() => setIsCreateOpen(false)} />}
     </>
   );
 }

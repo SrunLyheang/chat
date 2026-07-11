@@ -41,6 +41,7 @@ function ChatContainer() {
   const {
     selectedUser,
     getMessagesByUserId,
+    getGroupMessages,
     messages,
     isMessagesLoading,
     subscribeToMessages,
@@ -70,7 +71,18 @@ function ChatContainer() {
   }
 
   const toUserId = (value) => (value ? value.toString() : "");
+  const isGroup = !!selectedUser.isGroup;
   const selectedUserName = selectedUser.nickname?.trim() || selectedUser.fullName;
+
+  // For groups: map participant id -> details so each bubble can show who sent it.
+  const participantMap = new Map(
+    (selectedUser.participants || []).map((p) => [toUserId(p._id), p])
+  );
+  const senderName = (senderId) => {
+    if (toUserId(senderId) === toUserId(authUser._id)) return "You";
+    const p = participantMap.get(toUserId(senderId));
+    return p?.fullName || "Unknown";
+  };
 
   const pinnedMessages = messages.filter((m) => m.isPinned && !m.isDeleted);
   // newest pinned message shown first, clicking the bar cycles back through older ones
@@ -81,7 +93,9 @@ function ChatContainer() {
 
   const getReplySenderName = (reply) => {
     if (!reply?.senderId) return "Message";
-    return toUserId(reply.senderId) === toUserId(authUser._id) ? "You" : selectedUserName;
+    if (toUserId(reply.senderId) === toUserId(authUser._id)) return "You";
+    // In a group the reply can be from any member; look them up by id.
+    return isGroup ? senderName(reply.senderId) : selectedUserName;
   };
 
   const getReplyText = (reply) => {
@@ -124,12 +138,16 @@ function ChatContainer() {
   };
 
   useEffect(() => {
-    getMessagesByUserId(selectedUser._id);
+    if (selectedUser.isGroup) {
+      getGroupMessages(selectedUser._id);
+    } else {
+      getMessagesByUserId(selectedUser._id);
+    }
     subscribeToMessages();
 
     // clean up
     return () => unsubscribeFromMessages();
-  }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser, getMessagesByUserId, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => () => {
     if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
@@ -309,6 +327,12 @@ function ChatContainer() {
                         </div>
                       )}
 
+                      {isGroup && !isOwnMessage && isFirstInGroup && (
+                        <p className="mb-0.5 text-xs font-semibold text-cyan-300">
+                          {senderName(msg.senderId)}
+                        </p>
+                      )}
+
                       {msg.isDeleted ? (
                         <p className="text-sm italic opacity-60">This message was deleted</p>
                       ) : (
@@ -383,7 +407,7 @@ function ChatContainer() {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                        {isOwnMessage && !msg.isDeleted && (
+                        {isOwnMessage && !msg.isDeleted && !isGroup && (
                           msg.seen ? (
                             <CheckCheck className="h-3.5 w-3.5 text-sky-200" />
                           ) : (
