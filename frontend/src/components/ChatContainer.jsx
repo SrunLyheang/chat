@@ -248,7 +248,7 @@ function ChatContainer() {
                     <div
                       className={`relative max-w-[80%] px-3 py-1.5 shadow-sm transition-all sm:max-w-[70%] ${
                         isOwnMessage
-                          ? `rounded-2xl bg-gradient-to-br from-primary to-primaryStrong text-onPrimary ${
+                          ? `rounded-2xl bg-primary bg-gradient-to-br from-primary to-primaryStrong text-onPrimary ${
                               isLastInGroup ? "rounded-br-md" : ""
                             }`
                           : `rounded-2xl border border-edge/60 bg-surface text-content ${

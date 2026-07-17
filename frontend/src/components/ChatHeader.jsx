@@ -104,11 +104,11 @@ function ChatHeader() {
         >
           <div className="w-10 rounded-full">
             {isGroup ? (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-accent bg-gradient-to-br from-accent to-primary flex items-center justify-center">
                 <UsersIcon className="w-5 h-5 text-onPrimary" />
               </div>
             ) : selectedUser.isBot ? (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary bg-gradient-to-br from-primary to-primaryStrong flex items-center justify-center">
                 <BotIcon className="w-5 h-5 text-onPrimary" />
               </div>
             ) : (

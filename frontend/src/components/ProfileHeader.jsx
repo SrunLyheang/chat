@@ -7,32 +7,28 @@ import {
   BotIcon,
   ChevronDownIcon,
   ShieldBanIcon,
-  PaletteIcon,
-  CheckIcon,
   MoreVerticalIcon,
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { useThemeStore, THEMES } from "../store/useThemeStore";
 import { useI18nStore, LANGS } from "../store/useI18nStore";
 import BlockedUsersModal from "./BlockedUsersModal";
+import ThemeSwitcher from "./ThemeSwitcher";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile, isUpdatingProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound, allContacts, getAllContacts, setSelectedUser } = useChatStore();
-  const { theme, setTheme } = useThemeStore();
   const { t, lang, setLang } = useI18nStore();
   const [selectedImg, setSelectedImg] = useState(null);
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
-  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const botMenuRef = useRef(null);
-  const themeMenuRef = useRef(null);
   const moreMenuRef = useRef(null);
 
   const bots = allContacts.filter((c) => c.isBot);
@@ -45,9 +41,6 @@ function ProfileHeader() {
     const handleClickOutside = (e) => {
       if (botMenuRef.current && !botMenuRef.current.contains(e.target)) {
         setIsBotMenuOpen(false);
-      }
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
-        setIsThemeMenuOpen(false);
       }
       if (
         moreMenuRef.current &&
@@ -138,51 +131,10 @@ function ProfileHeader() {
         {/* BUTTONS */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* THEME PICKER */}
-          <div className="relative" ref={themeMenuRef}>
-            <button
-              type="button"
-              className="text-muted hover:text-primary transition-colors"
-              onClick={() => setIsThemeMenuOpen((open) => !open)}
-              title={t("profile.theme")}
-            >
-              <PaletteIcon className="size-5" />
-            </button>
-
-            {isThemeMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-edge/50 bg-ground shadow-lg z-20 overflow-hidden">
-                {THEMES.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => {
-                      setTheme(option.id);
-                      setIsThemeMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-content hover:bg-surface transition-colors"
-                  >
-                    <span
-                      className="size-4 shrink-0 rounded-full border border-edge"
-                      style={{
-                        background: `linear-gradient(135deg, ${option.swatch[0]} 45%, ${option.swatch[1]} 45%)`,
-                      }}
-                    />
-                    <span className="flex-1 truncate">{t(option.labelKey)}</span>
-                    {theme === option.id && <CheckIcon className="size-4 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ThemeSwitcher />
 
           {/* LANGUAGE TOGGLE */}
-          <button
-            type="button"
-            onClick={toggleLang}
-            title={t("profile.language")}
-            className="rounded-md border border-edge/60 px-1.5 py-0.5 text-xs font-semibold text-muted hover:text-primary hover:border-primary/50 transition-colors"
-          >
-            {currentLangLabel}
-          </button>
+          <LanguageSwitcher />
 
           {/* AI ASSISTANT DROPDOWN — pick which bot to chat with */}
           {bots.length > 0 && (

@@ -3,6 +3,8 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useI18nStore } from "../store/useI18nStore";
 import { useNavigate } from "react-router-dom";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
+import ThemeSwitcher from "../components/ThemeSwitcher";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { LotusMark, AngkorSilhouette, KbachDivider } from "../components/brand/KhmerMarks";
 import { LockIcon, MailIcon, UserIcon, LoaderIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -25,10 +27,14 @@ function SignUpPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center p-4 bg-ground">
+    <div className="relative w-full min-h-screen flex items-center justify-center p-4 pt-16 sm:pt-4">
+      <div className="absolute right-4 top-4 flex items-center gap-3">
+        <LanguageSwitcher />
+        <ThemeSwitcher />
+      </div>
       <div className="relative w-full max-w-md">
         <BorderAnimatedContainer>
-          <div className="relative w-full p-8 overflow-hidden">
+          <div className="relative w-full p-6 sm:p-8 overflow-hidden">
             {/* Angkor Wat watermark behind the heading */}
             <AngkorSilhouette className="pointer-events-none absolute left-1/2 top-2 w-56 -translate-x-1/2 text-primary opacity-10" />
 
