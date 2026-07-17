@@ -170,7 +170,7 @@ function MessageInput() {
         <button
           type="submit"
           disabled={!text.trim() && !imagePreview}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary to-primaryStrong text-onPrimary transition-all hover:from-primaryStrong hover:to-primaryStrong disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary bg-gradient-to-r from-primary to-primaryStrong text-onPrimary transition-all hover:from-primaryStrong hover:to-primaryStrong disabled:cursor-not-allowed disabled:opacity-40"
         >
           <SendIcon className="w-5 h-5" />
         </button>

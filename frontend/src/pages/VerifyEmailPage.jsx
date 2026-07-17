@@ -3,6 +3,8 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useI18nStore } from "../store/useI18nStore";
 import { useNavigate } from "react-router-dom";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
+import ThemeSwitcher from "../components/ThemeSwitcher";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { MailCheckIcon, LoaderIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -51,7 +53,11 @@ function VerifyEmailPage() {
 
   if (!pendingUser) {
     return (
-      <div className="w-full flex items-center justify-center p-4 bg-ground min-h-screen">
+      <div className="relative w-full flex items-center justify-center p-4 pt-16 sm:pt-4 min-h-screen">
+        <div className="absolute right-4 top-4 flex items-center gap-3">
+          <LanguageSwitcher />
+          <ThemeSwitcher />
+        </div>
         <div className="text-center">
           <p className="text-content mb-4">{t("auth.noPending")}</p>
           <Link to="/signup" className="text-primary hover:text-primaryStrong">
@@ -63,10 +69,14 @@ function VerifyEmailPage() {
   }
 
   return (
-    <div className="w-full flex items-center justify-center p-4 bg-ground min-h-screen">
+    <div className="relative w-full flex items-center justify-center p-4 pt-16 sm:pt-4 min-h-screen">
+      <div className="absolute right-4 top-4 flex items-center gap-3">
+        <LanguageSwitcher />
+        <ThemeSwitcher />
+      </div>
       <div className="relative w-full max-w-md">
         <BorderAnimatedContainer>
-          <div className="p-8">
+          <div className="p-6 sm:p-8">
             {/* HEADING TEXT */}
             <div className="text-center mb-8">
               <MailCheckIcon className="w-12 h-12 mx-auto text-muted mb-4" />

@@ -39,11 +39,15 @@ function App() {
   if (isCheckingAuth) return <PageLoader />;
 
   return (
-    <div className="min-h-screen bg-ground relative flex items-center justify-center p-4 overflow-hidden">
-      {/* DECORATORS - GRID BG & GLOW SHAPES (theme-aware via CSS variables) */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--edge)/.22)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--edge)/.22)_1px,transparent_1px)] bg-[size:14px_24px]" />
-      <div className="absolute top-0 -left-4 size-96 bg-accent opacity-20 blur-[100px]" />
-      <div className="absolute bottom-0 -right-4 size-96 bg-primary opacity-20 blur-[100px]" />
+    <div className="relative min-h-screen bg-ground">
+      {/* DECORATORS - GRID BG & GLOW SHAPES (theme-aware via CSS variables).
+          Kept in their own fixed, clipped layer so tall pages can scroll on
+          small screens without the glow shapes creating overflow. */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--edge)/.22)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--edge)/.22)_1px,transparent_1px)] bg-[size:14px_24px]" />
+        <div className="absolute top-0 -left-4 size-96 bg-accent opacity-20 blur-[100px]" />
+        <div className="absolute bottom-0 -right-4 size-96 bg-primary opacity-20 blur-[100px]" />
+      </div>
 
       <Routes>
         <Route path="/" element={<RequireAuth><ChatPage /></RequireAuth>} />
